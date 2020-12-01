@@ -1,6 +1,23 @@
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
 #include <DHT.h>
 
-// ====== DHT11 Settings ======
+
+// ====== Screen Settings ======
+#define SCREEN_ADDR 0x3C
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+
+// ====== Temperature Sensor Settings ======
 #define DHT_PIN 0
 
 #define DHT_TYPE DHT11   // DHT 11
@@ -13,7 +30,21 @@ DHT dht(DHT_PIN, DHT_TYPE);
 void setup() {
   Serial.begin(115200);
 
-  // Initialize device.
+  // Initialize screen
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;); // Don't proceed, loop forever
+  }
+
+  // Clear the screen buffer
+  display.clearDisplay();
+
+  // Update screen
+  display.display();
+
+
+  // Initialize temperature sensor.
+  // TODO show DHT initialization on screen
   dht.begin();
 }
 
@@ -24,8 +55,17 @@ void loop() {
   // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
 
+  // Clear the screen buffer
+  display.clearDisplay();
+  // Draw 2X-scale text
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
   if (isnan(h) || isnan(t)) {
     Serial.println(F("Failed to read from DHT sensor!"));
+
+    display.setCursor(0, 0);
+    display.print(F("Failed to read from DHT sensor!"));
   }
   else {
     Serial.print("Temp: ");
@@ -33,7 +73,20 @@ void loop() {
     Serial.print("°C    Hum: ");
     Serial.print(h);
     Serial.println("%");
+
+    display.setCursor(0, 0);
+    display.print(F("Temp: "));
+    display.print(t);
+    display.print("C");
+
+    display.setCursor(0, 20);
+    display.print(F("Humidity: "));
+    display.print(h);
+    display.print("%");
   }
+
+  // Update screen
+  display.display();
 
   // Delay between measurements.
   delay(2000);
