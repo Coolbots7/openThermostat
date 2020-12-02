@@ -16,6 +16,8 @@
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+// ====== Relay Settings ======
+#define FURNACE_RELAY_PIN 16
 
 // ====== Temperature Sensor Settings ======
 #define DHT_PIN 0
@@ -29,6 +31,11 @@ DHT dht(DHT_PIN, DHT_TYPE);
 
 void setup() {
   Serial.begin(115200);
+
+  // Initialize relays
+  pinMode(FURNACE_RELAY_PIN, OUTPUT);
+  digitalWrite(FURNACE_RELAY_PIN, LOW);
+
 
   // Initialize screen
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR)) {
@@ -84,6 +91,13 @@ void loop() {
     display.print(h);
     display.print("%");
   }
+
+  // Toggle relay
+  digitalWrite(FURNACE_RELAY_PIN, !digitalRead(FURNACE_RELAY_PIN));
+
+  display.setCursor(0, 40);
+  display.print(F("Heat: "));
+  display.print(digitalRead(FURNACE_RELAY_PIN) == HIGH ? "On" : "Off");
 
   // Update screen
   display.display();
