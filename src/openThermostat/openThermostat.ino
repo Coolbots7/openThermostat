@@ -67,6 +67,14 @@ uint8_t SETPOINT_MAX = MAXIMUM_SETPOINT;
 
 uint8_t currentSetpoint = DEFAULT_SETPOINT;
 
+#ifndef HYSTERESIS
+#define HYSTERESIS 2
+#endif
+
+#ifndef STATE_CHANGE_DELAY
+#define STATE_CHANGE_DELAY 60000
+#endif
+
 
 // ====== Globals ======
 enum ThermostatMode {
@@ -288,6 +296,10 @@ String methodToString(int method) {
   }
 }
 
+double celsiusToFahrenheit(double celsius) {
+  return (celsius * 9 / 5) + 32;
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -401,6 +413,7 @@ void setup() {
 }
 
 unsigned long lastDHTUpdateTime = 0;
+unsigned long lastStateChangeTime = 0;
 
 void loop() {
   // Update WiFi
@@ -422,10 +435,23 @@ void loop() {
   display.print("Mode: ");
   display.print(currentThermostatMode == MANUAL ? "Manual" : "Auto");
   if (currentThermostatMode == MANUAL) {
+    //Event based, do nothing in main loop
   }
   else if (currentThermostatMode == AUTOMATIC) {
-    //TODO update thermostat state
-    //TODO limit state update rate
+    // Limit state update rate
+    if (millis() >= lastStateChangeTime + STATE_CHANGE_DELAY) {
+      lastStateChangeTime = millis();
+
+      // Update thermostat state
+      if (celsiusToFahrenheit(currentTemperature) > currentSetpoint + HYSTERESIS) {
+        // Turn off heat
+        currentThermostatState = OFF;
+      }
+      else if (celsiusToFahrenheit(currentTemperature) < currentSetpoint - HYSTERESIS) {
+        // Turn on heat
+        currentThermostatState = HEATING;
+      }
+    }
   }
 
 
@@ -471,8 +497,8 @@ void loop() {
   else {
     display.setCursor(0, 20);
     display.print(F("Temp: "));
-    display.print(currentTemperature);
-    display.print("C");
+    display.print(celsiusToFahrenheit(currentTemperature));
+    display.print("F");
 
     display.setCursor(0, 30);
     display.print(F("Humidity: "));
