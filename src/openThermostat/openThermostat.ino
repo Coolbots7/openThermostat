@@ -52,6 +52,22 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 DHT dht(DHT_PIN, DHT_TYPE);
 
 
+// ====== Thermostat Settings ======
+#ifndef MINIMUM_SETPOINT
+#define MINIMUM_SETPOINT 64
+#define MAXIMUM_SETPOINT 90
+#endif
+
+uint8_t SETPOINT_MIN = MINIMUM_SETPOINT;
+uint8_t SETPOINT_MAX = MAXIMUM_SETPOINT;
+
+#ifndef DEFAULT_SETPOINT
+#define DEFAULT_SETPOINT 70
+#endif
+
+uint8_t currentSetpoint = DEFAULT_SETPOINT;
+
+
 // ====== Globals ======
 enum ThermostatMode {
   MANUAL,
@@ -168,6 +184,40 @@ void handleState() {
     else {
       //return response
       server.send(400, "text/plain", "Unknown state: " + state);
+    }
+
+    return;
+  }
+
+  handleMethodNotAllowed();
+}
+
+void handleSetpoint() {
+  if (server.method() == HTTP_POST || server.method() == HTTP_PUT) {
+
+    //Check arguments
+    String setpointStr = getArgValue("setpoint", true);
+    if (setpointStr.length() <= 0) {
+      handleBadRequest();
+      return;
+    }
+
+    // Convert argument to integer
+    // Note: cast to int returns 0 if invalid
+    uint8_t setpoint = setpointStr.toInt();
+
+    if (setpoint >= SETPOINT_MIN && setpoint <= SETPOINT_MAX) {
+      currentThermostatMode = AUTOMATIC;
+
+      //update setpoint
+      currentSetpoint = setpoint;
+
+      //return response
+      server.send(200, "text/plain", "Setpoint set to: " + String(setpoint));
+    }
+    else {
+      //return response
+      handleBadRequest();
     }
 
     return;
@@ -329,6 +379,7 @@ void setup() {
   server.on("/", handleRoot);
   server.on("/state", handleState);
   server.on("/mode", handleMode);
+  server.on("/setpoint", handleSetpoint);
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("HTTP server started");
@@ -337,6 +388,16 @@ void setup() {
   // ====== Initialize temperature sensor ======
   // TODO show DHT initialization on screen
   dht.begin();
+
+
+  // ====== Initialize setpoint limits ======
+  if (SETPOINT_MIN < 64) {
+    SETPOINT_MIN = 64;
+  }
+
+  if (SETPOINT_MAX < SETPOINT_MIN + 10 || SETPOINT_MAX > 90) {
+    SETPOINT_MAX = 90;
+  }
 }
 
 unsigned long lastDHTUpdateTime = 0;
@@ -418,6 +479,13 @@ void loop() {
     display.print(currentHumidity);
     display.print("%");
   }
+
+
+  display.setCursor(0, 40);
+  display.print("Setpoint: ");
+  display.print(currentSetpoint);
+  display.print("F");
+
 
   // Update screen
   display.display();
