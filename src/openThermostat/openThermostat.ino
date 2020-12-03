@@ -11,6 +11,17 @@
 
 #include <DHT.h>
 
+#include "PersistentStorage.h"
+
+
+// ====== Initialize Persistent Storage ======
+PersistentStorage *storage = storage->getInstance();
+
+
+// ====== Factory Reset Settings ======
+#define FACTORY_RESET_TIME 5000
+#define FACTORY_RESET_PIN 14
+
 
 // ====== WiFi Settings ======
 // Override SSID and password definitions in wifi.h which is excluded from source control
@@ -65,8 +76,6 @@ uint8_t SETPOINT_MAX = MAXIMUM_SETPOINT;
 #define DEFAULT_SETPOINT 70
 #endif
 
-uint8_t currentSetpoint = DEFAULT_SETPOINT;
-
 #ifndef HYSTERESIS
 #define HYSTERESIS 2
 #endif
@@ -86,10 +95,6 @@ enum ThermostatState {
   OFF,
   HEATING
 };
-
-// Start in AUTOMATIC
-ThermostatMode currentThermostatMode = AUTOMATIC;
-ThermostatState currentThermostatState = OFF;
 
 float currentTemperature = sqrt(-1);
 float currentHumidity = sqrt(-1);
@@ -115,8 +120,8 @@ String getArgValue(String argName, bool ignoreCase = false) {
 void handleRoot() {
   char temp[400];
   snprintf(temp, 400,
-           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"mode\": \"%s\", \"state\": \"%s\" }",
-           currentTemperature, currentHumidity, currentThermostatMode == AUTOMATIC ? "automatic" : "manual", currentThermostatState == OFF ? "off" : "heating");
+           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %d, \"mode\": \"%s\", \"state\": \"%s\" }",
+           currentTemperature, currentHumidity, storage->getCurrentSetpoint(), storage->getCurrentThermostatMode() == AUTOMATIC ? "automatic" : "manual", storage->getCurrentThermostatState() == OFF ? "off" : "heating");
 
   server.send(200, "application/json", temp);
 }
@@ -135,7 +140,7 @@ void handleMode() {
 
     if (mode == "manual") {
       //set mode
-      currentThermostatMode = MANUAL;
+      storage->setCurrentThermostatMode(MANUAL);
 
       //return response
       server.send(400, "text/plain", "Set mode to: " + mode);
@@ -143,7 +148,7 @@ void handleMode() {
     }
     else if (mode == "auto" || mode == "automatic") {
       //set mode
-      currentThermostatMode = AUTOMATIC;
+      storage->setCurrentThermostatMode(AUTOMATIC);
 
       //return response
       server.send(400, "text/plain", "Set mode to: " + mode);
@@ -172,19 +177,19 @@ void handleState() {
     state.toLowerCase();
 
     if (state == "off") {
-      currentThermostatMode = MANUAL;
+      storage->setCurrentThermostatMode(MANUAL);
 
       //update state
-      currentThermostatState = OFF;
+      storage->setCurrentThermostatState(OFF);
 
       //return response
       server.send(200, "text/plain", "State updated to: " + state);
     }
     else if (state == "heat") {
-      currentThermostatMode = MANUAL;
+      storage->setCurrentThermostatMode(MANUAL);
 
       //update state
-      currentThermostatState = HEATING;
+      storage->setCurrentThermostatState(HEATING);
 
       //return response
       server.send(200, "text/plain", "State updated to: " + state);
@@ -215,10 +220,10 @@ void handleSetpoint() {
     uint8_t setpoint = setpointStr.toInt();
 
     if (setpoint >= SETPOINT_MIN && setpoint <= SETPOINT_MAX) {
-      currentThermostatMode = AUTOMATIC;
+      storage->setCurrentThermostatMode(AUTOMATIC);
 
       //update setpoint
-      currentSetpoint = setpoint;
+      storage->setCurrentSetpoint(setpoint);
 
       //return response
       server.send(200, "text/plain", "Setpoint set to: " + String(setpoint));
@@ -300,6 +305,14 @@ double celsiusToFahrenheit(double celsius) {
   return (celsius * 9 / 5) + 32;
 }
 
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
+void factoryReset() {
+  storage->setCurrentThermostatMode((uint8_t)AUTOMATIC);
+  storage->setCurrentThermostatState((int8_t)OFF);
+  storage->setCurrentSetpoint(DEFAULT_SETPOINT);
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -320,9 +333,42 @@ void setup() {
   // Update screen
   display.display();
 
-  //show welcome screen
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
+
+  // Factory reset
+  pinMode(FACTORY_RESET_PIN, INPUT);
+  if (digitalRead(FACTORY_RESET_PIN) == HIGH) {
+    unsigned long factoryResetStartTime = millis();
+    while (millis() < factoryResetStartTime + FACTORY_RESET_TIME) {
+      // Display factory reset
+      display.clearDisplay();
+      display.setCursor(30, 30);
+      display.print("Factory reset in: ");
+      display.setCursor(60, 40);
+      display.print(ceil(((factoryResetStartTime + FACTORY_RESET_TIME) - millis()) / 1000));
+      display.display();
+    }
+    if (digitalRead(FACTORY_RESET_PIN) == HIGH) {
+      display.clearDisplay();
+      display.setCursor(30, 30);
+      display.print("Resetting...");
+      display.display();
+      delay(200);
+      factoryReset();
+      display.clearDisplay();
+      display.setCursor(30, 30);
+      display.print("Reset!");
+      display.display();
+      while (digitalRead(FACTORY_RESET_PIN) == HIGH) {
+        delay(100);
+      }
+      resetFunc();
+
+    }
+  }
+
+  //show welcome screen
   display.setCursor(35, 20);
   display.print("Welcome to");
   display.setCursor(15, 40);
@@ -355,9 +401,9 @@ void setup() {
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(5, 20);
-    display.print("Connecting to WiFi network: ");
+    display.print("Connecting to network: ");
     display.print(ssid);
-    display.setCursor(30, 40);
+    display.setCursor(30, 30);
 
     display.print(wifiLoading ? "-" : "|");
     display.display();
@@ -382,7 +428,7 @@ void setup() {
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(40, 20);
   display.print("Connected!");
-  display.setCursor(30, 40);
+  display.setCursor(10, 40);
   display.print("IP: ");
   display.print(WiFi.localIP());
   display.display();
@@ -433,23 +479,23 @@ void loop() {
   //display current mode on screen
   display.setCursor(0, 0);
   display.print("Mode: ");
-  display.print(currentThermostatMode == MANUAL ? "Manual" : "Auto");
-  if (currentThermostatMode == MANUAL) {
+  display.print((ThermostatMode)storage->getCurrentThermostatMode() == MANUAL ? "Manual" : "Auto");
+  if ((ThermostatMode)storage->getCurrentThermostatMode() == MANUAL) {
     //Event based, do nothing in main loop
   }
-  else if (currentThermostatMode == AUTOMATIC) {
+  else if ((ThermostatMode)storage->getCurrentThermostatMode() == AUTOMATIC) {
     // Limit state update rate
     if (millis() >= lastStateChangeTime + STATE_CHANGE_DELAY) {
       lastStateChangeTime = millis();
 
       // Update thermostat state
-      if (celsiusToFahrenheit(currentTemperature) > currentSetpoint + HYSTERESIS) {
+      if (celsiusToFahrenheit(currentTemperature) > storage->getCurrentSetpoint() + HYSTERESIS) {
         // Turn off heat
-        currentThermostatState = OFF;
+        storage->setCurrentThermostatState(OFF);
       }
-      else if (celsiusToFahrenheit(currentTemperature) < currentSetpoint - HYSTERESIS) {
+      else if (celsiusToFahrenheit(currentTemperature) < storage->getCurrentSetpoint() - HYSTERESIS) {
         // Turn on heat
-        currentThermostatState = HEATING;
+        storage->setCurrentThermostatState(HEATING);
       }
     }
   }
@@ -458,11 +504,11 @@ void loop() {
   //State Machine
   display.setCursor(0, 10);
   display.print("State: ");
-  display.print(currentThermostatState == OFF ? "Off" : "Heat");
-  if (currentThermostatState == OFF) {
+  display.print((ThermostatState)storage->getCurrentThermostatState() == OFF ? "Off" : "Heat");
+  if ((ThermostatState)storage->getCurrentThermostatState() == OFF) {
     digitalWrite(FURNACE_RELAY_PIN, LOW);
   }
-  else if (currentThermostatState == HEATING) {
+  else if ((ThermostatState)storage->getCurrentThermostatState() == HEATING) {
     digitalWrite(FURNACE_RELAY_PIN, HIGH);
   }
 
@@ -509,7 +555,7 @@ void loop() {
 
   display.setCursor(0, 40);
   display.print("Setpoint: ");
-  display.print(currentSetpoint);
+  display.print(storage->getCurrentSetpoint());
   display.print("F");
 
 
