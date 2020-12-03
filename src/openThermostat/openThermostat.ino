@@ -58,8 +58,14 @@ enum ThermostatMode {
   AUTOMATIC
 };
 
+enum ThermostatState {
+  OFF,
+  HEATING
+};
+
 // Start in AUTOMATIC
 ThermostatMode currentThermostatMode = AUTOMATIC;
+ThermostatState currentThermostatState = OFF;
 
 float currentTemperature = sqrt(-1);
 float currentHumidity = sqrt(-1);
@@ -85,8 +91,8 @@ String getArgValue(String argName, bool ignoreCase = false) {
 void handleRoot() {
   char temp[400];
   snprintf(temp, 400,
-           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"mode\": \"%s\", \"state\": { \"heating\": %s }}",
-           currentTemperature, currentHumidity, currentThermostatMode == AUTOMATIC ? "automatic" : "manual", digitalRead(FURNACE_RELAY_PIN) == HIGH ? "true" : "false");
+           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"mode\": \"%s\", \"state\": \"%s\" }",
+           currentTemperature, currentHumidity, currentThermostatMode == AUTOMATIC ? "automatic" : "manual", currentThermostatState == OFF ? "off" : "heating");
 
   server.send(200, "application/json", temp);
 }
@@ -143,14 +149,18 @@ void handleState() {
 
     if (state == "off") {
       currentThermostatMode = MANUAL;
-      //TODO update state
+
+      //update state
+      currentThermostatState = OFF;
 
       //return response
       server.send(200, "text/plain", "State updated to: " + state);
     }
     else if (state == "heat") {
       currentThermostatMode = MANUAL;
-      //TODO update state
+
+      //update state
+      currentThermostatState = HEATING;
 
       //return response
       server.send(200, "text/plain", "State updated to: " + state);
@@ -345,19 +355,30 @@ void loop() {
   display.setTextColor(SSD1306_WHITE);
 
 
-
   // Mode state machine
   //display current mode on screen
   display.setCursor(0, 0);
   display.print("Mode: ");
   display.print(currentThermostatMode == MANUAL ? "Manual" : "Auto");
   if (currentThermostatMode == MANUAL) {
-    //TODO get previous manual state from EEPROM
   }
   else if (currentThermostatMode == AUTOMATIC) {
     //TODO update thermostat state
     //TODO limit state update rate
   }
+
+
+  //State Machine
+  display.setCursor(0, 10);
+  display.print("State: ");
+  display.print(currentThermostatState == OFF ? "Off" : "Heat");
+  if (currentThermostatState == OFF) {
+    digitalWrite(FURNACE_RELAY_PIN, LOW);
+  }
+  else if (currentThermostatState == HEATING) {
+    digitalWrite(FURNACE_RELAY_PIN, HIGH);
+  }
+
 
   // Update temperature and humidity
   if (millis() >= lastDHTUpdateTime + DHT_UPDATE_PERIOD) {
@@ -379,33 +400,24 @@ void loop() {
       Serial.print(currentHumidity);
       Serial.println("%");
     }
-
-
-    // Toggle relay
-    digitalWrite(FURNACE_RELAY_PIN, !digitalRead(FURNACE_RELAY_PIN));
   }
 
 
   if (isnan(currentHumidity) || isnan(currentTemperature)) {
-    display.setCursor(0, 10);
+    display.setCursor(0, 20);
     display.print(F("Failed to read from DHT sensor!"));
   }
   else {
-    display.setCursor(0, 10);
+    display.setCursor(0, 20);
     display.print(F("Temp: "));
     display.print(currentTemperature);
     display.print("C");
 
-    display.setCursor(0, 20);
+    display.setCursor(0, 30);
     display.print(F("Humidity: "));
     display.print(currentHumidity);
     display.print("%");
   }
-
-
-  display.setCursor(0, 30);
-  display.print(F("Heat: "));
-  display.print(digitalRead(FURNACE_RELAY_PIN) == HIGH ? "On" : "Off");
 
   // Update screen
   display.display();
