@@ -53,6 +53,14 @@ DHT dht(DHT_PIN, DHT_TYPE);
 
 
 // ====== Globals ======
+enum ThermostatMode {
+  MANUAL,
+  AUTOMATIC
+};
+
+// Start in AUTOMATIC
+ThermostatMode currentThermostatMode = AUTOMATIC;
+
 float currentTemperature = sqrt(-1);
 float currentHumidity = sqrt(-1);
 
@@ -77,10 +85,48 @@ String getArgValue(String argName, bool ignoreCase = false) {
 void handleRoot() {
   char temp[400];
   snprintf(temp, 400,
-           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"state\": { \"heating\": %s }}",
-           currentTemperature, currentHumidity, digitalRead(FURNACE_RELAY_PIN) == HIGH ? "true" : "false");
+           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"mode\": \"%s\", \"state\": { \"heating\": %s }}",
+           currentTemperature, currentHumidity, currentThermostatMode == AUTOMATIC ? "automatic" : "manual", digitalRead(FURNACE_RELAY_PIN) == HIGH ? "true" : "false");
 
   server.send(200, "application/json", temp);
+}
+
+void handleMode() {
+  if (server.method() == HTTP_POST || server.method() == HTTP_PUT) {
+
+    //Check arguments
+    String mode = getArgValue("mode", true);
+    if (mode.length() <= 0) {
+      handleBadRequest();
+      return;
+    }
+
+    mode.toLowerCase();
+
+    if (mode == "manual") {
+      //set mode
+      currentThermostatMode = MANUAL;
+
+      //return response
+      server.send(400, "text/plain", "Set mode to: " + mode);
+
+    }
+    else if (mode == "auto" || mode == "automatic") {
+      //set mode
+      currentThermostatMode = AUTOMATIC;
+
+      //return response
+      server.send(400, "text/plain", "Set mode to: " + mode);
+    }
+    else {
+      //return response
+      server.send(400, "text/plain", "Unknown mode: " + mode);
+    }
+
+    return;
+  }
+
+  handleMethodNotAllowed();
 }
 
 void handleState() {
@@ -93,18 +139,21 @@ void handleState() {
       return;
     }
 
-    //TODO update state
+    state.toLowerCase();
+
     if (state == "off") {
+      currentThermostatMode = MANUAL;
+      //TODO update state
+
       //return response
-      server.send(200, "text/plain", "State Updated to: " + state);
+      server.send(200, "text/plain", "State updated to: " + state);
     }
     else if (state == "heat") {
+      currentThermostatMode = MANUAL;
+      //TODO update state
+
       //return response
-      server.send(200, "text/plain", "State Updated to: " + state);
-    }
-    else if (state == "auto") {
-      //return response
-      server.send(200, "text/plain", "State Updated to: " + state);
+      server.send(200, "text/plain", "State updated to: " + state);
     }
     else {
       //return response
@@ -269,6 +318,7 @@ void setup() {
 
   server.on("/", handleRoot);
   server.on("/state", handleState);
+  server.on("/mode", handleMode);
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("HTTP server started");
@@ -295,6 +345,20 @@ void loop() {
   display.setTextColor(SSD1306_WHITE);
 
 
+
+  // Mode state machine
+  //display current mode on screen
+  display.setCursor(0, 0);
+  display.print("Mode: ");
+  display.print(currentThermostatMode == MANUAL ? "Manual" : "Auto");
+  if (currentThermostatMode == MANUAL) {
+    //TODO get previous manual state from EEPROM
+  }
+  else if (currentThermostatMode == AUTOMATIC) {
+    //TODO update thermostat state
+    //TODO limit state update rate
+  }
+
   // Update temperature and humidity
   if (millis() >= lastDHTUpdateTime + DHT_UPDATE_PERIOD) {
     lastDHTUpdateTime = millis();
@@ -307,9 +371,6 @@ void loop() {
 
     if (isnan(currentHumidity) || isnan(currentTemperature)) {
       Serial.println(F("Failed to read from DHT sensor!"));
-
-      display.setCursor(0, 0);
-      display.print(F("Failed to read from DHT sensor!"));
     }
     else {
       Serial.print("Temp: ");
@@ -326,11 +387,11 @@ void loop() {
 
 
   if (isnan(currentHumidity) || isnan(currentTemperature)) {
-    display.setCursor(0, 0);
+    display.setCursor(0, 10);
     display.print(F("Failed to read from DHT sensor!"));
   }
   else {
-    display.setCursor(0, 0);
+    display.setCursor(0, 10);
     display.print(F("Temp: "));
     display.print(currentTemperature);
     display.print("C");
@@ -342,7 +403,7 @@ void loop() {
   }
 
 
-  display.setCursor(0, 40);
+  display.setCursor(0, 30);
   display.print(F("Heat: "));
   display.print(digitalRead(FURNACE_RELAY_PIN) == HIGH ? "On" : "Off");
 
