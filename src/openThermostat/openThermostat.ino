@@ -120,8 +120,8 @@ String getArgValue(String argName, bool ignoreCase = false) {
 void handleRoot() {
   char temp[400];
   snprintf(temp, 400,
-           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %d, \"mode\": { \"description\": \"%s\", \"value\": %d }, \"state\": { \"description\": \"%s\", \"value\": %d } }",
-           currentTemperature, currentHumidity, storage->getCurrentSetpoint(), storage->getCurrentThermostatMode() == AUTOMATIC ? "automatic" : "manual", storage->getCurrentThermostatMode(), storage->getCurrentThermostatState() == OFF ? "off" : "heating", storage->getCurrentThermostatState());
+           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %0.2f, \"mode\": { \"description\": \"%s\", \"value\": %d }, \"state\": { \"description\": \"%s\", \"value\": %d } }",
+           currentTemperature, currentHumidity, fahrenheitToCelsius(storage->getCurrentSetpoint()), storage->getCurrentThermostatMode() == AUTOMATIC ? "automatic" : "manual", storage->getCurrentThermostatMode(), storage->getCurrentThermostatState() == OFF ? "off" : "heating", storage->getCurrentThermostatState());
 
   server.send(200, "application/json", temp);
 }
@@ -303,6 +303,10 @@ String methodToString(int method) {
 
 double celsiusToFahrenheit(double celsius) {
   return (celsius * 9 / 5) + 32;
+}
+
+double fahrenheitToCelsius(double fahrenheit) {
+  return (fahrenheit - 32) * 5 / 9;
 }
 
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
