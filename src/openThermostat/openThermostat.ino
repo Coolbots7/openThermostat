@@ -185,7 +185,7 @@ void handleState() {
       //return response
       server.send(200, "text/plain", "State updated to: " + state);
     }
-    else if (state == "heat") {
+    else if (state == "heating") {
       storage->setCurrentThermostatMode(MANUAL);
 
       //update state
