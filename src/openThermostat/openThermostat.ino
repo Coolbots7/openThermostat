@@ -87,13 +87,13 @@ uint8_t SETPOINT_MAX = MAXIMUM_SETPOINT;
 
 // ====== Globals ======
 enum ThermostatMode {
-  MANUAL,
-  AUTOMATIC
+  MANUAL = 0,
+  AUTOMATIC = 1
 };
 
 enum ThermostatState {
-  OFF,
-  HEATING
+  OFF = 0,
+  HEATING = 1
 };
 
 float currentTemperature = sqrt(-1);
@@ -120,8 +120,8 @@ String getArgValue(String argName, bool ignoreCase = false) {
 void handleRoot() {
   char temp[400];
   snprintf(temp, 400,
-           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %d, \"mode\": \"%s\", \"state\": \"%s\" }",
-           currentTemperature, currentHumidity, storage->getCurrentSetpoint(), storage->getCurrentThermostatMode() == AUTOMATIC ? "automatic" : "manual", storage->getCurrentThermostatState() == OFF ? "off" : "heating");
+           "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %d, \"mode\": { \"description\": \"%s\", \"value\": %d }, \"state\": { \"description\": \"%s\", \"value\": %d } }",
+           currentTemperature, currentHumidity, storage->getCurrentSetpoint(), storage->getCurrentThermostatMode() == AUTOMATIC ? "automatic" : "manual", storage->getCurrentThermostatMode(), storage->getCurrentThermostatState() == OFF ? "off" : "heating", storage->getCurrentThermostatState());
 
   server.send(200, "application/json", temp);
 }
