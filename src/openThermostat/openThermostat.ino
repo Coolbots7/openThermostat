@@ -467,19 +467,7 @@ void loop() {
   MDNS.update();
 
 
-  // Clear the screen buffer
-  display.clearDisplay();
-
-  // Set display text format
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-
-
   // Mode state machine
-  //display current mode on screen
-  display.setCursor(0, 0);
-  display.print("Mode: ");
-  display.print((ThermostatMode)storage->getCurrentThermostatMode() == MANUAL ? "Manual" : "Auto");
   if ((ThermostatMode)storage->getCurrentThermostatMode() == MANUAL) {
     //Event based, do nothing in main loop
   }
@@ -489,11 +477,11 @@ void loop() {
       lastStateChangeTime = millis();
 
       // Update thermostat state
-      if (celsiusToFahrenheit(currentTemperature) > storage->getCurrentSetpoint() + HYSTERESIS) {
+      if ((uint8_t)celsiusToFahrenheit(currentTemperature) >= storage->getCurrentSetpoint() + HYSTERESIS) {
         // Turn off heat
         storage->setCurrentThermostatState(OFF);
       }
-      else if (celsiusToFahrenheit(currentTemperature) < storage->getCurrentSetpoint() - HYSTERESIS) {
+      else if ((uint8_t)celsiusToFahrenheit(currentTemperature) <= storage->getCurrentSetpoint() - HYSTERESIS) {
         // Turn on heat
         storage->setCurrentThermostatState(HEATING);
       }
@@ -502,9 +490,6 @@ void loop() {
 
 
   //State Machine
-  display.setCursor(0, 10);
-  display.print("State: ");
-  display.print((ThermostatState)storage->getCurrentThermostatState() == OFF ? "Off" : "Heat");
   if ((ThermostatState)storage->getCurrentThermostatState() == OFF) {
     digitalWrite(FURNACE_RELAY_PIN, LOW);
   }
@@ -519,14 +504,17 @@ void loop() {
 
     // Reading temperature or humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-    currentHumidity = dht.readHumidity();
+    float tempHumidity = dht.readHumidity();
     // Read temperature as Celsius (the default)
-    currentTemperature = dht.readTemperature();
+    float tempTemperature = dht.readTemperature();
 
-    if (isnan(currentHumidity) || isnan(currentTemperature)) {
+    if (isnan(tempHumidity) || isnan(tempTemperature)) {
       Serial.println(F("Failed to read from DHT sensor!"));
     }
     else {
+      currentHumidity = tempHumidity;
+      currentTemperature = tempTemperature;
+
       Serial.print("Temp: ");
       Serial.print(currentTemperature);
       Serial.print("°C    Hum: ");
@@ -534,30 +522,42 @@ void loop() {
       Serial.println("%");
     }
   }
+  
 
+  // Clear the screen buffer
+  display.clearDisplay();
 
-  if (isnan(currentHumidity) || isnan(currentTemperature)) {
-    display.setCursor(0, 20);
-    display.print(F("Failed to read from DHT sensor!"));
-  }
-  else {
-    display.setCursor(0, 20);
-    display.print(F("Temp: "));
-    display.print(celsiusToFahrenheit(currentTemperature));
-    display.print("F");
+  display.setTextColor(SSD1306_WHITE);
 
-    display.setCursor(0, 30);
-    display.print(F("Humidity: "));
-    display.print(currentHumidity);
-    display.print("%");
-  }
-
-
-  display.setCursor(0, 40);
-  display.print("Setpoint: ");
-  display.print(storage->getCurrentSetpoint());
+  //current temperature
+  display.setTextSize(3);
+  display.setCursor(10, 12);
+  display.print((uint8_t)celsiusToFahrenheit(currentTemperature));
   display.print("F");
 
+  //humidity
+  display.setTextSize(2);
+  display.setCursor(80, 5);
+  display.print((uint8_t)currentHumidity);
+  display.print("%");
+
+  if ((ThermostatMode)storage->getCurrentThermostatMode() == AUTOMATIC) {
+    //setpoint
+    display.setTextSize(2);
+    display.setCursor(80, 25);
+    display.print(storage->getCurrentSetpoint());
+    display.print("F");
+  }
+
+  //mode
+  display.setTextSize(1);
+  display.setCursor(20, 50);
+  display.print((ThermostatMode)storage->getCurrentThermostatMode() == MANUAL ? "Manual" : "Auto");
+
+  //state
+  display.setTextSize(1);
+  display.setCursor(80, 50);
+  display.print((ThermostatState)storage->getCurrentThermostatState() == OFF ? "Off" : "Heat");
 
   // Update screen
   display.display();
