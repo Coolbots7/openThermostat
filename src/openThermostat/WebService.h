@@ -15,6 +15,17 @@ private:
     double currentTemperature;
     double currentHumidity;
 
+
+    double celsiusToFahrenheit(double celsius)
+    {
+        return (celsius * 9 / 5) + 32;
+    }
+
+    double fahrenheitToCelsius(double fahrenheit)
+    {
+        return (fahrenheit - 32) * 5 / 9;
+    }
+
     String getArgValue(String argName, bool ignoreCase = false)
     {
         for (uint8_t i = 0; i < server->args(); i++)
@@ -49,31 +60,69 @@ private:
         }
     }
 
-    String statusJSON()
+    String statusJSON(bool useImperialUnits = false)
     {
+        double temperature = currentTemperature;
+        double setpoint = thermostat->getSetpoint();
+
+        if (useImperialUnits)
+        {
+            temperature = celsiusToFahrenheit(temperature);
+            setpoint = celsiusToFahrenheit(setpoint);
+        }
+
         char temp[400];
         snprintf(temp, 400,
                  "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %0.2f, \"mode\": { \"description\": \"%s\", \"value\": %d }, \"state\": { \"description\": \"%s\", \"value\": %d } }",
-                 currentTemperature, currentHumidity, fahrenheitToCelsius(thermostat->getSetpoint()), thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC ? "automatic" : "manual", thermostat->getMode(), thermostat->getState() == Thermostat::ThermostatState::OFF ? "off" : "heating", thermostat->getState());
+                 temperature, currentHumidity, setpoint, thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC ? "automatic" : "manual", thermostat->getMode(), thermostat->getState() == Thermostat::ThermostatState::OFF ? "off" : "heating", thermostat->getState());
 
         return String(temp);
     }
 
     void handleRoot()
     {
-        server->send(200, "application/json", statusJSON());
+        //Get url params
+        String units = getArgValue("units", true);
+
+        bool useImperialUnits = false;
+        if (units.length() > 0)
+        {
+            units.toLowerCase();
+
+            if (units.equals("imperial"))
+            {
+                useImperialUnits = true;
+            }
+        }
+
+        server->send(200, "application/json", statusJSON(useImperialUnits));
     }
 
     void handleMode()
     {
+        //Get url params
+        String units = getArgValue("units", true);
+
+        bool useImperialUnits = false;
+        if (units.length() > 0)
+        {
+            units.toLowerCase();
+
+            if (units.equals("imperial"))
+            {
+                useImperialUnits = true;
+            }
+        }
+
         if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
         {
-
-            //Check arguments
+            //Get url params
             String mode = getArgValue("mode", true);
+
+            //Make sure required params are included
             if (mode.length() <= 0)
             {
-                handleBadRequest();
+                server->send(400, "application/json", statusJSON(useImperialUnits));
                 return;
             }
 
@@ -85,7 +134,7 @@ private:
                 thermostat->setMode(Thermostat::ThermostatMode::MANUAL);
 
                 //return response
-                server->send(200, "application/json", statusJSON());
+                server->send(200, "application/json", statusJSON(useImperialUnits));
             }
             else if (mode == "auto" || mode == "automatic")
             {
@@ -93,32 +142,40 @@ private:
                 thermostat->setMode(Thermostat::ThermostatMode::AUTOMATIC);
 
                 //return response
-                server->send(200, "application/json", statusJSON());
+                server->send(200, "application/json", statusJSON(useImperialUnits));
             }
             else
             {
                 //return response
-                server->send(400, "application/json", statusJSON());
+                server->send(400, "application/json", statusJSON(useImperialUnits));
             }
 
             return;
         }
 
-        handleMethodNotAllowed();
+        server->send(405, "application/json", statusJSON(useImperialUnits));
     }
 
     void handleState()
     {
+        //Get url params
+        String units = getArgValue("units", true);
+
+        bool useImperialUnits = false;
+        if (units.length() > 0)
+        {
+            units.toLowerCase();
+
+            if (units.equals("imperial"))
+            {
+                useImperialUnits = true;
+            }
+        }
+
         if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
         {
-
-            //Check arguments
+            //Get url params
             String state = getArgValue("state", true);
-            if (state.length() <= 0)
-            {
-                handleBadRequest();
-                return;
-            }
 
             state.toLowerCase();
 
@@ -128,7 +185,7 @@ private:
                 thermostat->setState(Thermostat::ThermostatState::OFF);
 
                 //return response
-                server->send(200, "application/json", statusJSON());
+                server->send(200, "application/json", statusJSON(useImperialUnits));
             }
             else if (state == "heating")
             {
@@ -136,36 +193,55 @@ private:
                 thermostat->setState(Thermostat::ThermostatState::HEATING);
 
                 //return response
-                server->send(200, "application/json", statusJSON());
+                server->send(200, "application/json", statusJSON(useImperialUnits));
             }
             else
             {
                 //return response
-                server->send(400, "application/json", statusJSON());
+                server->send(400, "application/json", statusJSON(useImperialUnits));
             }
 
             return;
         }
 
-        handleMethodNotAllowed();
+        server->send(405, "application/json", statusJSON(useImperialUnits));
     }
 
     void handleSetpoint()
     {
+        //Get url params
+        String units = getArgValue("units", true);
+
+        bool useImperialUnits = false;
+        if (units.length() > 0)
+        {
+            units.toLowerCase();
+
+            if (units.equals("imperial"))
+            {
+                useImperialUnits = true;
+            }
+        }
+
         if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
         {
-
-            //Check arguments
+            //Get url params
             String setpointStr = getArgValue("setpoint", true);
+
+            //Make sure required params are included
             if (setpointStr.length() <= 0)
             {
-                handleBadRequest();
+                server->send(400, "application/json", statusJSON(useImperialUnits));
                 return;
             }
 
             // Convert argument to integer
             // Note: cast to int returns 0 if invalid
-            uint8_t setpoint = setpointStr.toInt();
+            double setpoint = setpointStr.toDouble();
+
+            if(useImperialUnits) {
+                setpoint = fahrenheitToCelsius(setpoint);
+            }
 
             //update setpoint
             if (setpoint != 0 && thermostat->setSetpoint(setpoint))
@@ -174,74 +250,22 @@ private:
                 thermostat->setMode(Thermostat::ThermostatMode::AUTOMATIC);
 
                 //return response
-                server->send(200, "application/json", statusJSON());
+                server->send(200, "application/json", statusJSON(useImperialUnits));
             }
             else
             {
-                handleBadRequest();
+                server->send(400, "application/json", statusJSON(useImperialUnits));
             }
 
             return;
         }
 
-        handleMethodNotAllowed();
+        server->send(405, "application/json", statusJSON(useImperialUnits));
     }
 
     void handleNotFound()
     {
-        String message = "Not Found\n\n";
-        message += "URI: ";
-        message += server->uri();
-        message += "\nMethod: ";
-        message += methodToString(server->method());
-        message += "\nArguments: ";
-        message += server->args();
-        message += "\n";
-
-        for (uint8_t i = 0; i < server->args(); i++)
-        {
-            message += " " + server->argName(i) + ": " + server->arg(i) + "\n";
-        }
-
-        server->send(404, "application/json", statusJSON());
-    }
-
-    void handleMethodNotAllowed()
-    {
-        String message = "Method Not Allowed\n\n";
-        message += "URI: ";
-        message += server->uri();
-        message += "\nMethod: ";
-        message += methodToString(server->method());
-        message += "\nArguments: ";
-        message += server->args();
-        message += "\n";
-
-        for (uint8_t i = 0; i < server->args(); i++)
-        {
-            message += " " + server->argName(i) + ": " + server->arg(i) + "\n";
-        }
-
-        server->send(405, "application/json", statusJSON());
-    }
-
-    void handleBadRequest()
-    {
-        String message = "Bad Request\n\n";
-        message += "URI: ";
-        message += server->uri();
-        message += "\nMethod: ";
-        message += methodToString(server->method());
-        message += "\nArguments: ";
-        message += server->args();
-        message += "\n";
-
-        for (uint8_t i = 0; i < server->args(); i++)
-        {
-            message += " " + server->argName(i) + ": " + server->arg(i) + "\n";
-        }
-
-        server->send(400, "application/json", statusJSON());
+        server->send(404, "text/plain", "Not Found");
     }
 
 public:

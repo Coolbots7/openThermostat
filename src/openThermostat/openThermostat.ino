@@ -262,8 +262,8 @@ void loop()
   //current temperature
   display.setTextSize(3);
   display.setCursor(10, 12);
-  display.print((uint8_t)celsiusToFahrenheit(currentTemperature));
-  display.print("F");
+  display.print((uint8_t)currentTemperature);
+  display.print("C");
 
   //humidity
   display.setTextSize(2);
@@ -277,7 +277,7 @@ void loop()
     display.setTextSize(2);
     display.setCursor(80, 25);
     display.print((uint8_t)thermostat->getSetpoint());
-    display.print("F");
+    display.print("C");
   }
 
   //mode
