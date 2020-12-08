@@ -1,3 +1,6 @@
+#ifndef THERMOSTAT_H
+#define THERMOSTAT_H
+
 #include "PersistentStorage.h"
 
 // ====== Thermostat Settings ======
@@ -143,3 +146,5 @@ class Thermostat {
     }
 
 };
+
+#endif
