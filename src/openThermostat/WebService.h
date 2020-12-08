@@ -17,6 +17,8 @@ private:
     double currentTemperature;
     double currentHumidity;
 
+    double remoteTemperature;
+
     String getArgValue(String argName, bool ignoreCase = false)
     {
         for (uint8_t i = 0; i < server->args(); i++)
@@ -265,6 +267,52 @@ private:
         server->send(405, "application/json", statusJSON(useImperialUnits));
     }
 
+    void handleTemperature()
+    {
+        //Get url params
+        String units = getArgValue("units", true);
+
+        bool useImperialUnits = false;
+        if (units.length() > 0)
+        {
+            units.toLowerCase();
+
+            if (units.equals("imperial"))
+            {
+                useImperialUnits = true;
+            }
+        }
+
+        if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
+        {
+            String temperatureStr = getArgValue("temperature", true);
+
+            if (temperatureStr.length() <= 0)
+            {
+                //Bad request
+                server->send(400, "application/json", statusJSON(useImperialUnits));
+                return;
+            }
+
+            double temperature = temperatureStr.toDouble();
+            if (useImperialUnits)
+            {
+                temperature = fahrenheitToCelsius(temperature);
+            }
+
+            //TODO check temperature is in a valid range
+
+            //Update remote temperature
+            remoteTemperature = temperature;
+
+            server->send(200, "application/json", settingsJSON());
+            return;
+        }
+
+        //Method not allowed
+        server->send(405, "application/json", settingsJSON());
+    }
+
     void handleSettings()
     {
         if (server->method() == HTTP_GET)
@@ -309,6 +357,7 @@ public:
         server->on("/state", std::bind(&WebService::handleState, this));
         server->on("/mode", std::bind(&WebService::handleMode, this));
         server->on("/setpoint", std::bind(&WebService::handleSetpoint, this));
+        server->on("/temperature", std::bind(&WebService::handleTemperature, this));
         server->on("/settings", std::bind(&WebService::handleSettings, this));
         server->onNotFound(std::bind(&WebService::handleNotFound, this));
         server->begin();
@@ -321,5 +370,10 @@ public:
 
         server->handleClient();
         MDNS.update();
+    }
+
+    double getRemoteTemperature()
+    {
+        return remoteTemperature;
     }
 };
