@@ -3,6 +3,7 @@
 #include <ESP8266Webserver.h>
 #include <ESP8266mDNS.h>
 
+#include "Temperature.h"
 #include "Thermostat.h"
 
 class WebService
@@ -10,21 +11,11 @@ class WebService
 private:
     ESP8266WebServer *server;
 
+    PersistentStorage *storage;
     Thermostat *thermostat;
 
     double currentTemperature;
     double currentHumidity;
-
-
-    double celsiusToFahrenheit(double celsius)
-    {
-        return (celsius * 9 / 5) + 32;
-    }
-
-    double fahrenheitToCelsius(double fahrenheit)
-    {
-        return (fahrenheit - 32) * 5 / 9;
-    }
 
     String getArgValue(String argName, bool ignoreCase = false)
     {
@@ -75,6 +66,16 @@ private:
         snprintf(temp, 400,
                  "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %0.2f, \"mode\": { \"description\": \"%s\", \"value\": %d }, \"state\": { \"description\": \"%s\", \"value\": %d } }",
                  temperature, currentHumidity, setpoint, thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC ? "automatic" : "manual", thermostat->getMode(), thermostat->getState() == Thermostat::ThermostatState::OFF ? "off" : "heating", thermostat->getState());
+
+        return String(temp);
+    }
+
+    String settingsJSON()
+    {
+        char temp[400];
+        snprintf(temp, 400,
+                 "{ \"screenImperial\": %s }",
+                 storage->getSettingScreenImperial() ? "true" : "false");
 
         return String(temp);
     }
@@ -239,7 +240,8 @@ private:
             // Note: cast to int returns 0 if invalid
             double setpoint = setpointStr.toDouble();
 
-            if(useImperialUnits) {
+            if (useImperialUnits)
+            {
                 setpoint = fahrenheitToCelsius(setpoint);
             }
 
@@ -263,6 +265,32 @@ private:
         server->send(405, "application/json", statusJSON(useImperialUnits));
     }
 
+    void handleSettings()
+    {
+        if (server->method() == HTTP_GET)
+        {
+            server->send(200, "application/json", settingsJSON());
+            return;
+        }
+        else if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
+        {
+            //Get screen units param and update storage
+            String screenImperialStr = getArgValue("screenImperial", true);
+            if (screenImperialStr.length() > 0)
+            {
+                screenImperialStr.toLowerCase();
+                bool screenImperial = screenImperialStr.equals("true");
+                storage->setSettingScreenImperial(screenImperial);
+            }
+
+            server->send(200, "application/json", settingsJSON());
+            return;
+        }
+
+        //Method not allowed
+        server->send(405, "application/json", settingsJSON());
+    }
+
     void handleNotFound()
     {
         server->send(404, "text/plain", "Not Found");
@@ -273,12 +301,15 @@ public:
     {
         server = new ESP8266WebServer(port);
 
+        storage = storage->getInstance();
+
         thermostat = t;
 
         server->on("/", std::bind(&WebService::handleRoot, this));
         server->on("/state", std::bind(&WebService::handleState, this));
         server->on("/mode", std::bind(&WebService::handleMode, this));
         server->on("/setpoint", std::bind(&WebService::handleSetpoint, this));
+        server->on("/settings", std::bind(&WebService::handleSettings, this));
         server->onNotFound(std::bind(&WebService::handleNotFound, this));
         server->begin();
     }

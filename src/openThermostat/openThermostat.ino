@@ -11,6 +11,8 @@
 
 #include <DHT.h>
 
+#include "Temperature.h"
+#include "PersistentStorage.h"
 #include "Thermostat.h"
 #include "WebService.h"
 
@@ -58,6 +60,9 @@ DHT dht(DHT_PIN, DHT_TYPE);
 float currentTemperature = sqrt(-1);
 float currentHumidity = sqrt(-1);
 
+//TODO factory reset settings
+PersistentStorage *storage;
+
 // Thermostat *thermostat = thermostat->getInstance();
 Thermostat *thermostat = new Thermostat();
 
@@ -77,7 +82,8 @@ void setup()
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR))
   {
     Serial.println(F("SSD1306 allocation failed"));
-    for (;;); // Don't proceed, loop forever
+    for (;;)
+      ; // Don't proceed, loop forever
   }
 
   // Clear the screen buffer
@@ -112,6 +118,7 @@ void setup()
       display.display();
       delay(200);
       thermostat->factoryReset();
+      storage->factoryReset();
       display.clearDisplay();
       display.setCursor(30, 30);
       display.print("Reset!");
@@ -138,7 +145,6 @@ void setup()
 
   // Update screen
   display.display();
-
 
   // ====== Initialize WiFi ======
   //TODO move WiFi connection to WebServer class while still showing progress on screen
@@ -195,15 +201,16 @@ void setup()
   display.display();
   delay(1000);
 
-
   // ====== Initialize Web Service ======
   int port = PORT;
   webService = new WebService(port, thermostat);
-  
 
   // ====== Initialize temperature sensor ======
   // TODO show DHT initialization on screen
   dht.begin();
+
+  // ====== Get Persistent Storage singleton
+  storage = storage->getInstance();
 }
 
 unsigned long lastDHTUpdateTime = 0;
@@ -262,8 +269,16 @@ void loop()
   //current temperature
   display.setTextSize(3);
   display.setCursor(10, 12);
-  display.print((uint8_t)currentTemperature);
-  display.print("C");
+  if (storage->getSettingScreenImperial())
+  {
+    display.print((uint8_t)celsiusToFahrenheit(currentTemperature));
+    display.print("F");
+  }
+  else
+  {
+    display.print((uint8_t)currentTemperature);
+    display.print("C");
+  }
 
   //humidity
   display.setTextSize(2);
@@ -276,8 +291,16 @@ void loop()
     //setpoint
     display.setTextSize(2);
     display.setCursor(80, 25);
-    display.print((uint8_t)thermostat->getSetpoint());
-    display.print("C");
+    if (storage->getSettingScreenImperial())
+    {
+      display.print((uint8_t)celsiusToFahrenheit(thermostat->getSetpoint()));
+      display.print("F");
+    }
+    else
+    {
+      display.print((uint8_t)thermostat->getSetpoint());
+      display.print("C");
+    }
   }
 
   //mode

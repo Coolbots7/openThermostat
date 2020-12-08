@@ -8,12 +8,16 @@
 #define EEPROM_CURRENT_STATE 1    // 1 byte
 #define EEPROM_CURRENT_SETPOINT 2 // 4 bytes
 
+#define EEPROM_SETTING_SCREEN_UNIT 40 // 1 byte
+
 class PersistentStorage
 {
 private:
   uint8_t currentThermostatMode;
   uint8_t currentThermostatState;
   double currentSetpoint;
+
+  bool settingScreenImperial;
 
   static PersistentStorage *instance;
 
@@ -26,6 +30,8 @@ private:
     currentThermostatMode = getCurrentThermostatMode();
     currentThermostatState = getCurrentThermostatState();
     currentSetpoint = getCurrentSetpoint();
+
+    settingScreenImperial = getSettingScreenImperial();
   }
 
   void EEPROM_writeDouble(uint8_t address, double value)
@@ -57,6 +63,10 @@ public:
       instance = new PersistentStorage;
     }
     return instance;
+  }
+
+  void factoryReset() {
+    setSettingScreenImperial(false);
   }
 
   // Current Thermostat Mode
@@ -100,7 +110,7 @@ public:
     if (setpoint != currentSetpoint)
     {
       currentSetpoint = setpoint;
-      EEPROM_writeDouble(EEPROM_CURRENT_SETPOINT, setpoint);
+      EEPROM_writeDouble(EEPROM_CURRENT_SETPOINT, currentSetpoint);
       EEPROM.commit();
     }
   }
@@ -108,6 +118,22 @@ public:
   double getCurrentSetpoint()
   {
     return EEPROM_readDouble(EEPROM_CURRENT_SETPOINT);
+  }
+
+  // Setting Screen Unit
+  void setSettingScreenImperial(bool imperial)
+  {
+    if (imperial != settingScreenImperial)
+    {
+      settingScreenImperial = imperial;
+      EEPROM.write(EEPROM_SETTING_SCREEN_UNIT, settingScreenImperial);
+      EEPROM.commit();
+    }
+  }
+
+  bool getSettingScreenImperial()
+  {
+    return (bool)EEPROM.read(EEPROM_SETTING_SCREEN_UNIT);
   }
 };
 
