@@ -8,7 +8,8 @@
 #define EEPROM_CURRENT_STATE 1    // 1 byte
 #define EEPROM_CURRENT_SETPOINT 2 // 4 bytes
 
-#define EEPROM_SETTING_SCREEN_UNIT 40 // 1 byte
+#define EEPROM_SETTING_SCREEN_UNIT 40        // 1 byte
+#define EEPROM_SETTING_REMOTE_TEMPERATURE 41 // 4 bytes
 
 class PersistentStorage
 {
@@ -18,12 +19,12 @@ private:
   double currentSetpoint;
 
   bool settingScreenImperial;
+  bool useRemoteTemperature;
 
   static PersistentStorage *instance;
 
   PersistentStorage()
   {
-
     // ====== Initialize EEPROM ======
     EEPROM.begin(512);
 
@@ -32,6 +33,7 @@ private:
     currentSetpoint = getCurrentSetpoint();
 
     settingScreenImperial = getSettingScreenImperial();
+    useRemoteTemperature = getSettingUseRemoteTemperature();
   }
 
   void EEPROM_writeDouble(uint8_t address, double value)
@@ -65,7 +67,8 @@ public:
     return instance;
   }
 
-  void factoryReset() {
+  void factoryReset()
+  {
     setSettingScreenImperial(false);
   }
 
@@ -134,6 +137,22 @@ public:
   bool getSettingScreenImperial()
   {
     return (bool)EEPROM.read(EEPROM_SETTING_SCREEN_UNIT);
+  }
+
+  // Setting use remote temperature
+  void setSettingUseRemoteTemperature(bool remote)
+  {
+    if (useRemoteTemperature != remote)
+    {
+      useRemoteTemperature = remote;
+      EEPROM.write(EEPROM_SETTING_REMOTE_TEMPERATURE, useRemoteTemperature);
+      EEPROM.commit();
+    }
+  }
+
+  bool getSettingUseRemoteTemperature()
+  {
+    return (bool)EEPROM.read(EEPROM_SETTING_REMOTE_TEMPERATURE);
   }
 };
 
