@@ -11,11 +11,7 @@
 
 #include <DHT.h>
 
-#include "PersistentStorage.h"
-
-
-// ====== Initialize Persistent Storage ======
-PersistentStorage *storage = storage->getInstance();
+#include "Thermostat.h"
 
 
 // ====== Factory Reset Settings ======
@@ -63,41 +59,14 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 DHT dht(DHT_PIN, DHT_TYPE);
 
 
-// ====== Thermostat Settings ======
-#ifndef MINIMUM_SETPOINT
-#define MINIMUM_SETPOINT 64
-#define MAXIMUM_SETPOINT 90
-#endif
-
-uint8_t SETPOINT_MIN = MINIMUM_SETPOINT;
-uint8_t SETPOINT_MAX = MAXIMUM_SETPOINT;
-
-#ifndef DEFAULT_SETPOINT
-#define DEFAULT_SETPOINT 70
-#endif
-
-#ifndef HYSTERESIS
-#define HYSTERESIS 2
-#endif
-
-#ifndef STATE_CHANGE_DELAY
-#define STATE_CHANGE_DELAY 60000
-#endif
-
-
 // ====== Globals ======
-enum ThermostatMode {
-  MANUAL = 0,
-  AUTOMATIC = 1
-};
-
-enum ThermostatState {
-  OFF = 0,
-  HEATING = 1
-};
 
 float currentTemperature = sqrt(-1);
 float currentHumidity = sqrt(-1);
+
+// Thermostat *thermostat = thermostat->getInstance();
+Thermostat *thermostat = new Thermostat();
+
 
 
 String getArgValue(String argName, bool ignoreCase = false) {
@@ -121,7 +90,7 @@ void handleRoot() {
   char temp[400];
   snprintf(temp, 400,
            "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %0.2f, \"mode\": { \"description\": \"%s\", \"value\": %d }, \"state\": { \"description\": \"%s\", \"value\": %d } }",
-           currentTemperature, currentHumidity, fahrenheitToCelsius(storage->getCurrentSetpoint()), storage->getCurrentThermostatMode() == AUTOMATIC ? "automatic" : "manual", storage->getCurrentThermostatMode(), storage->getCurrentThermostatState() == OFF ? "off" : "heating", storage->getCurrentThermostatState());
+           currentTemperature, currentHumidity, fahrenheitToCelsius(thermostat->getSetpoint()), thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC ? "automatic" : "manual", thermostat->getMode(), thermostat->getState() == Thermostat::ThermostatState::OFF ? "off" : "heating", thermostat->getState());
 
   server.send(200, "application/json", temp);
 }
@@ -140,7 +109,7 @@ void handleMode() {
 
     if (mode == "manual") {
       //set mode
-      storage->setCurrentThermostatMode(MANUAL);
+      thermostat->setMode(Thermostat::ThermostatMode::MANUAL);
 
       //return response
       server.send(400, "text/plain", "Set mode to: " + mode);
@@ -148,7 +117,7 @@ void handleMode() {
     }
     else if (mode == "auto" || mode == "automatic") {
       //set mode
-      storage->setCurrentThermostatMode(AUTOMATIC);
+      thermostat->setMode(Thermostat::ThermostatMode::AUTOMATIC);
 
       //return response
       server.send(400, "text/plain", "Set mode to: " + mode);
@@ -177,19 +146,15 @@ void handleState() {
     state.toLowerCase();
 
     if (state == "off") {
-      storage->setCurrentThermostatMode(MANUAL);
-
       //update state
-      storage->setCurrentThermostatState(OFF);
+      thermostat->setState(Thermostat::ThermostatState::OFF);
 
       //return response
       server.send(200, "text/plain", "State updated to: " + state);
     }
     else if (state == "heating") {
-      storage->setCurrentThermostatMode(MANUAL);
-
       //update state
-      storage->setCurrentThermostatState(HEATING);
+      thermostat->setState(Thermostat::ThermostatState::HEATING);
 
       //return response
       server.send(200, "text/plain", "State updated to: " + state);
@@ -219,17 +184,15 @@ void handleSetpoint() {
     // Note: cast to int returns 0 if invalid
     uint8_t setpoint = setpointStr.toInt();
 
-    if (setpoint >= SETPOINT_MIN && setpoint <= SETPOINT_MAX) {
-      storage->setCurrentThermostatMode(AUTOMATIC);
-
-      //update setpoint
-      storage->setCurrentSetpoint(setpoint);
+    //update setpoint
+    if(setpoint != 0 && thermostat->setSetpoint(setpoint)) {
+      //Set thermostat to automatic
+      thermostat->setMode(Thermostat::ThermostatMode::AUTOMATIC);
 
       //return response
       server.send(200, "text/plain", "Setpoint set to: " + String(setpoint));
     }
     else {
-      //return response
       handleBadRequest();
     }
 
@@ -301,21 +264,7 @@ String methodToString(int method) {
   }
 }
 
-double celsiusToFahrenheit(double celsius) {
-  return (celsius * 9 / 5) + 32;
-}
-
-double fahrenheitToCelsius(double fahrenheit) {
-  return (fahrenheit - 32) * 5 / 9;
-}
-
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
-
-void factoryReset() {
-  storage->setCurrentThermostatMode((uint8_t)AUTOMATIC);
-  storage->setCurrentThermostatState((int8_t)OFF);
-  storage->setCurrentSetpoint(DEFAULT_SETPOINT);
-}
 
 void setup() {
   Serial.begin(115200);
@@ -359,7 +308,7 @@ void setup() {
       display.print("Resetting...");
       display.display();
       delay(200);
-      factoryReset();
+      thermostat->factoryReset();
       display.clearDisplay();
       display.setCursor(30, 30);
       display.print("Reset!");
@@ -451,55 +400,14 @@ void setup() {
   // TODO show DHT initialization on screen
   dht.begin();
 
-
-  // ====== Initialize setpoint limits ======
-  if (SETPOINT_MIN < 64) {
-    SETPOINT_MIN = 64;
-  }
-
-  if (SETPOINT_MAX < SETPOINT_MIN + 10 || SETPOINT_MAX > 90) {
-    SETPOINT_MAX = 90;
-  }
 }
 
 unsigned long lastDHTUpdateTime = 0;
-unsigned long lastStateChangeTime = 0;
 
 void loop() {
   // Update WiFi
   server.handleClient();
-  MDNS.update();
-
-
-  // Mode state machine
-  if ((ThermostatMode)storage->getCurrentThermostatMode() == MANUAL) {
-    //Event based, do nothing in main loop
-  }
-  else if ((ThermostatMode)storage->getCurrentThermostatMode() == AUTOMATIC) {
-    // Limit state update rate
-    if (millis() >= lastStateChangeTime + STATE_CHANGE_DELAY) {
-      lastStateChangeTime = millis();
-
-      // Update thermostat state
-      if ((uint8_t)celsiusToFahrenheit(currentTemperature) >= storage->getCurrentSetpoint() + HYSTERESIS) {
-        // Turn off heat
-        storage->setCurrentThermostatState(OFF);
-      }
-      else if ((uint8_t)celsiusToFahrenheit(currentTemperature) <= storage->getCurrentSetpoint() - HYSTERESIS) {
-        // Turn on heat
-        storage->setCurrentThermostatState(HEATING);
-      }
-    }
-  }
-
-
-  //State Machine
-  if ((ThermostatState)storage->getCurrentThermostatState() == OFF) {
-    digitalWrite(FURNACE_RELAY_PIN, LOW);
-  }
-  else if ((ThermostatState)storage->getCurrentThermostatState() == HEATING) {
-    digitalWrite(FURNACE_RELAY_PIN, HIGH);
-  }
+  MDNS.update(); 
 
 
   // Update temperature and humidity
@@ -526,8 +434,19 @@ void loop() {
       Serial.println("%");
     }
   }
+
+
+  //Update thermostat
+  Thermostat::ThermostatState state = thermostat->update(currentTemperature);
+  if (state == Thermostat::ThermostatState::OFF) {
+    digitalWrite(FURNACE_RELAY_PIN, LOW);
+  }
+  else if (state == Thermostat::ThermostatState::HEATING) {
+    digitalWrite(FURNACE_RELAY_PIN, HIGH);
+  }
   
 
+  // ====== Update Display ======
   // Clear the screen buffer
   display.clearDisplay();
 
@@ -545,24 +464,24 @@ void loop() {
   display.print((uint8_t)currentHumidity);
   display.print("%");
 
-  if ((ThermostatMode)storage->getCurrentThermostatMode() == AUTOMATIC) {
+  if ((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC) {
     //setpoint
     display.setTextSize(2);
     display.setCursor(80, 25);
-    display.print(storage->getCurrentSetpoint());
+    display.print((uint8_t)thermostat->getSetpoint());
     display.print("F");
   }
 
   //mode
   display.setTextSize(1);
   display.setCursor(20, 50);
-  display.print((ThermostatMode)storage->getCurrentThermostatMode() == MANUAL ? "Manual" : "Auto");
+  display.print((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::MANUAL ? "Manual" : "Auto");
 
   //state
   display.setTextSize(1);
   display.setCursor(80, 50);
-  display.print((ThermostatState)storage->getCurrentThermostatState() == OFF ? "Off" : "Heat");
+  display.print((Thermostat::ThermostatState)thermostat->getState() == Thermostat::ThermostatState::OFF ? "Off" : "Heat");
 
-  // Update screen
+  //Update screen
   display.display();
 }
