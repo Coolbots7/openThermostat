@@ -468,7 +468,7 @@ void loop() {
     //setpoint
     display.setTextSize(2);
     display.setCursor(80, 25);
-    display.print(thermostat->getSetpoint());
+    display.print((uint8_t)thermostat->getSetpoint());
     display.print("F");
   }
 
