@@ -76,8 +76,8 @@ private:
     {
         char temp[400];
         snprintf(temp, 400,
-                 "{ \"screenImperial\": %s }",
-                 storage->getSettingScreenImperial() ? "true" : "false");
+                 "{ \"screenImperial\": %s, \"useRemoteTemperature\": %s }",
+                 storage->getSettingScreenImperial() ? "true" : "false", storage->getSettingUseRemoteTemperature() ? "true" : "false");
 
         return String(temp);
     }
@@ -329,6 +329,15 @@ private:
                 screenImperialStr.toLowerCase();
                 bool screenImperial = screenImperialStr.equals("true");
                 storage->setSettingScreenImperial(screenImperial);
+            }
+
+            //Get use remote temperature param and update storage
+            String useRemoteTemperatureStr = getArgValue("useRemoteTemperature", true);
+            if (useRemoteTemperatureStr.length() > 0)
+            {
+                useRemoteTemperatureStr.toLowerCase();
+                bool useRemoteTemperature = useRemoteTemperatureStr.equals("true");
+                storage->setSettingUseRemoteTemperature(useRemoteTemperature);
             }
 
             server->send(200, "application/json", settingsJSON());
