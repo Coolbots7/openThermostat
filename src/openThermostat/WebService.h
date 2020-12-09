@@ -304,6 +304,7 @@ private:
 
             //Update remote temperature
             remoteTemperature = temperature;
+            currentTemperature = remoteTemperature;
 
             server->send(200, "application/json", statusJSON(useImperialUnits));
             return;
