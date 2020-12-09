@@ -274,23 +274,43 @@ void loop()
 
   //current temperature
   display.setTextSize(3);
-  display.setCursor(10, 12);
-  if (storage->getSettingScreenImperial())
+  display.setCursor(7, 12);
+  if (isnan(currentTemperature))
   {
-    display.print((uint8_t)celsiusToFahrenheit(currentTemperature));
-    display.print("F");
+    display.print("NAN");
   }
   else
   {
-    display.print((uint8_t)currentTemperature);
-    display.print("C");
+    if (storage->getSettingScreenImperial())
+    {
+      display.print((uint8_t)round(celsiusToFahrenheit(currentTemperature)));
+      display.print("F");
+    }
+    else
+    {
+      display.print((uint8_t)round(currentTemperature));
+      display.print("C");
+    }
+  }
+  //Show that temperature is remote
+  if (storage->getSettingUseRemoteTemperature())
+  {
+    display.setTextSize(1);
+    display.print("R");
   }
 
   //humidity
   display.setTextSize(2);
   display.setCursor(80, 5);
-  display.print((uint8_t)currentHumidity);
-  display.print("%");
+  if (isnan(currentHumidity))
+  {
+    display.print("NAN");
+  }
+  else
+  {
+    display.print((uint8_t)currentHumidity);
+    display.print("%");
+  }
 
   if ((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC)
   {
