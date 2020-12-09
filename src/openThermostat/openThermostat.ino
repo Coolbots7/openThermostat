@@ -57,8 +57,8 @@ DHT dht(DHT_PIN, DHT_TYPE);
 
 // ====== Globals ======
 
-float currentTemperature = sqrt(-1);
-float currentHumidity = sqrt(-1);
+float currentTemperature = NAN;
+float currentHumidity = NAN;
 
 //TODO factory reset settings
 PersistentStorage *storage;
@@ -244,6 +244,12 @@ void loop()
       Serial.print(currentHumidity);
       Serial.println("%");
     }
+  }
+
+  // Check remote temperature
+  if (storage->getSettingUseRemoteTemperature())
+  {
+    currentTemperature = webService->getRemoteTemperature();
   }
 
   // Update WiFi

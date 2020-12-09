@@ -28,7 +28,7 @@ private:
 
   double SETPOINT_MIN;
   double SETPOINT_MAX;
-  
+
   double hysteresis;
 
   unsigned long lastStateChangeTime;
@@ -97,28 +97,33 @@ public:
 
   ThermostatState update(double currentTemperature)
   {
-    // Mode state machine
-    if (getMode() == MANUAL)
+    //check temperature is not NAN
+    if (!isnan(currentTemperature))
     {
-      //Do nothing
-    }
-    else if (getMode() == AUTOMATIC)
-    {
-      // Limit state update rate
-      if (millis() >= lastStateChangeTime + STATE_CHANGE_DELAY)
-      {
-        lastStateChangeTime = millis();
 
-        // Update thermostat state
-        if (currentTemperature >= getSetpoint() + hysteresis)
+      // Mode state machine
+      if (getMode() == MANUAL)
+      {
+        //Do nothing
+      }
+      else if (getMode() == AUTOMATIC)
+      {
+        // Limit state update rate
+        if (millis() >= lastStateChangeTime + STATE_CHANGE_DELAY)
         {
-          // Turn off heat
-          setState(OFF);
-        }
-        else if (currentTemperature <= getSetpoint() - hysteresis)
-        {
-          // Turn on heat
-          setState(HEATING);
+          lastStateChangeTime = millis();
+
+          // Update thermostat state
+          if (currentTemperature >= getSetpoint() + hysteresis)
+          {
+            // Turn off heat
+            setState(OFF);
+          }
+          else if (currentTemperature <= getSetpoint() - hysteresis)
+          {
+            // Turn on heat
+            setState(HEATING);
+          }
         }
       }
     }

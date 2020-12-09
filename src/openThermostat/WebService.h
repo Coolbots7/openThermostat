@@ -305,12 +305,12 @@ private:
             //Update remote temperature
             remoteTemperature = temperature;
 
-            server->send(200, "application/json", settingsJSON());
+            server->send(200, "application/json", statusJSON(useImperialUnits));
             return;
         }
 
         //Method not allowed
-        server->send(405, "application/json", settingsJSON());
+        server->send(405, "application/json", statusJSON(useImperialUnits));
     }
 
     void handleSettings()
@@ -352,6 +352,9 @@ public:
         storage = storage->getInstance();
 
         thermostat = t;
+
+        // initialize remote temperature
+        remoteTemperature = NAN;
 
         server->on("/", std::bind(&WebService::handleRoot, this));
         server->on("/state", std::bind(&WebService::handleState, this));
