@@ -135,7 +135,7 @@ void setup()
   Serial.println(WiFi.localIP());
 
   // Show wifi connected on screen
-  display->wifiConnected(ssid, WiFi.localIP().toString());
+  display->wifiConnected(WiFi.localIP().toString());
 
   // ====== Initialize temperature sensor ======
   // TODO show DHT initialization on screen

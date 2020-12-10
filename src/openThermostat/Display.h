@@ -20,6 +20,7 @@
 #define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 
 #define WELCOME_PAUSE 1500
+#define WIFI_CONNECTED_PAUSE 1500
 
 class Display
 {
@@ -142,23 +143,24 @@ public:
         display->display();
     }
 
-    //TODO Wifi connected
-    void wifiConnected(String ssid, String ip)
+    // Wifi connected
+    void wifiConnected(String ip)
     {
         display->setTextSize(1);
         display->setTextColor(SSD1306_WHITE);
 
-        // Show wifi connected and details on screen
         display->clearDisplay();
-        display->setTextSize(1);
-        display->setTextColor(SSD1306_WHITE);
-        display->setCursor(40, 20);
+
+        display->setCursor(SCREEN_WIDTH/2-29, SCREEN_HEIGHT/2-15);
         display->print("Connected!");
-        display->setCursor(10, 40);
-        display->print("IP: ");
-        display->print(WiFi.localIP());
+
+        String ipStr = "IP: " + ip;
+        display->setCursor(SCREEN_WIDTH/2-(ipStr.length()/2 * 6), SCREEN_HEIGHT/2+15);
+        display->print(ipStr);
+
         display->display();
-        delay(1000);
+
+        delay(WIFI_CONNECTED_PAUSE);
     }
 
     //TODO main
