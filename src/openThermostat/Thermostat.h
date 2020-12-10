@@ -9,12 +9,16 @@
 #define MAXIMUM_SETPOINT 32
 #endif
 
-#ifndef DEFAULT_SETPOINT
-#define DEFAULT_SETPOINT 22
-#endif
+#define ABSOLUTE_MINIMUM_SETPOINT 18
+#define ABSOLUTE_MAXIMUM_SETPOINT 32
+#define MINIMUM_SETPOINT_RANGE 10
 
 #ifndef HYSTERESIS
 #define HYSTERESIS 1.5
+#endif
+
+#ifndef DEFAULT_SETPOINT
+#define DEFAULT_SETPOINT 22
 #endif
 
 #ifndef STATE_CHANGE_DELAY
@@ -44,34 +48,32 @@ private:
 
     // ====== Initialize setpoint limits ======
     //Cap setpoint min
-    if (SETPOINT_MIN < 18)
+    if (SETPOINT_MIN < ABSOLUTE_MINIMUM_SETPOINT)
     {
-      SETPOINT_MIN = 18;
+      SETPOINT_MIN = ABSOLUTE_MINIMUM_SETPOINT;
     }
 
-    //Make sure setpoint min is no larger than 22
-    //If setpoint min is greater than or equal to 23 this will cause setpoint max to be less than 10 degrees higher
-    if (SETPOINT_MIN > 22)
+    //Make sure setpoint min is no larger than ABSOLUTE_MAXIMUM_SETPOINT - MINIMUM_SETPOINT_RANGE
+    //If setpoint min is greater than or equal to ABSOLUTE_MAXIMUM_SETPOINT - MINIMUM_SETPOINT_RANGE + 1 this will cause setpoint max to be less than the minimum setpoint range
+    if (SETPOINT_MIN > ABSOLUTE_MAXIMUM_SETPOINT - MINIMUM_SETPOINT_RANGE)
     {
-      SETPOINT_MIN = 22;
+      SETPOINT_MIN = ABSOLUTE_MAXIMUM_SETPOINT - MINIMUM_SETPOINT_RANGE;
     }
 
     //Make sure setpoint max is at least 10 degrees higher than setpoint min
-    if (SETPOINT_MAX < SETPOINT_MIN + 10)
+    if (SETPOINT_MAX < SETPOINT_MIN + MINIMUM_SETPOINT_RANGE)
     {
-      SETPOINT_MAX = SETPOINT_MIN + 10;
+      SETPOINT_MAX = SETPOINT_MIN + MINIMUM_SETPOINT_RANGE;
     }
 
     //Cap setpoint max
-    if (SETPOINT_MAX > 32)
+    if (SETPOINT_MAX > ABSOLUTE_MAXIMUM_SETPOINT)
     {
-      SETPOINT_MAX = 32;
+      SETPOINT_MAX = ABSOLUTE_MAXIMUM_SETPOINT;
     }
 
     // ====== Initialize Hysteresis ======
     hysteresis = HYSTERESIS;
-
-    //TODO check hysteresis is less than minimum setpoint range
   }
 
 public:
