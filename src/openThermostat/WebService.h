@@ -298,13 +298,13 @@ private:
     }
 
 public:
-    WebService(int port, Thermostat *t)
+    WebService(int port)
     {
         server = new ESP8266WebServer(port);
 
         storage = storage->getInstance();
 
-        thermostat = t;
+        thermostat = thermostat->getInstance();
 
         // initialize remote temperature
         remoteTemperature = NAN;
