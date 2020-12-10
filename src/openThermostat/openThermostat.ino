@@ -4,14 +4,9 @@
 #include <ESP8266mDNS.h>
 #include "wifi.h"
 
-#include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-
 #include <DHT.h>
 
-#include "Temperature.h"
+#include "Display.h"
 #include "PersistentStorage.h"
 #include "Thermostat.h"
 #include "WebService.h"
@@ -30,16 +25,6 @@
 #ifndef PORT
 #define PORT 80
 #endif
-
-// ====== Screen Settings ======
-#define SCREEN_ADDR 0x3C
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ====== Relay Settings ======
 #define FURNACE_RELAY_PIN 16
@@ -60,11 +45,12 @@ DHT dht(DHT_PIN, DHT_TYPE);
 float currentTemperature = NAN;
 float currentHumidity = NAN;
 
+Display *display;
+
 //TODO factory reset settings
 PersistentStorage *storage;
 
-// Thermostat *thermostat = thermostat->getInstance();
-Thermostat *thermostat = new Thermostat();
+Thermostat *thermostat;
 
 WebService *webService;
 
@@ -78,22 +64,8 @@ void setup()
   pinMode(FURNACE_RELAY_PIN, OUTPUT);
   digitalWrite(FURNACE_RELAY_PIN, LOW);
 
-  // ======Initialize screen ======
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR))
-  {
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;)
-      ; // Don't proceed, loop forever
-  }
-
-  // Clear the screen buffer
-  display.clearDisplay();
-
-  // Update screen
-  display.display();
-
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
+  // ====== Create Display ======
+  display = new Display();
 
   // Factory reset
   pinMode(FACTORY_RESET_PIN, INPUT);
@@ -102,27 +74,21 @@ void setup()
     unsigned long factoryResetStartTime = millis();
     while (millis() < factoryResetStartTime + FACTORY_RESET_TIME)
     {
-      // Display factory reset
-      display.clearDisplay();
-      display.setCursor(30, 30);
-      display.print("Factory reset in: ");
-      display.setCursor(60, 40);
-      display.print(ceil(((factoryResetStartTime + FACTORY_RESET_TIME) - millis()) / 1000));
-      display.display();
+      // Show factory reset pending on screen
+      display->factoryResetPending(String(ceil(((factoryResetStartTime + FACTORY_RESET_TIME) - millis()) / 1000)));
     }
     if (digitalRead(FACTORY_RESET_PIN) == HIGH)
     {
-      display.clearDisplay();
-      display.setCursor(30, 30);
-      display.print("Resetting...");
-      display.display();
-      delay(200);
+      //Factory resetting on screen
+      display->factoryResetting();
+
       thermostat->factoryReset();
       storage->factoryReset();
-      display.clearDisplay();
-      display.setCursor(30, 30);
-      display.print("Reset!");
-      display.display();
+      delay(200);
+
+      //Show factory reset on screen
+      display->factoryResetComplete();
+
       while (digitalRead(FACTORY_RESET_PIN) == HIGH)
       {
         delay(100);
@@ -131,23 +97,11 @@ void setup()
     }
   }
 
-  //show welcome screen
-  display.setCursor(35, 20);
-  display.print("Welcome to");
-  display.setCursor(15, 40);
-  display.print("Open Thermostat");
-  display.display();
-
-  delay(1500);
-
-  // Clear the screen buffer
-  display.clearDisplay();
-
-  // Update screen
-  display.display();
+  // Show welcome screen
+  display->welcome();
 
   // ====== Initialize WiFi ======
-  //TODO move WiFi connection to WebServer class while still showing progress on screen
+  // TODO move WiFi connection to WebServer class while still showing progress on screen
   const char *ssid = STASSID;
   const char *password = STAPSK;
   WiFi.mode(WIFI_STA);
@@ -163,16 +117,7 @@ void setup()
     Serial.print(".");
 
     // Show wifi status on screen
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(5, 20);
-    display.print("Connecting to network: ");
-    display.print(ssid);
-    display.setCursor(30, 30);
-
-    display.print(wifiLoading ? "-" : "|");
-    display.display();
+    display->wifiConnecting(ssid);
     wifiLoading = !wifiLoading;
 
     delay(500);
@@ -189,21 +134,8 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Show wifi connected and details on screen
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(40, 20);
-  display.print("Connected!");
-  display.setCursor(10, 40);
-  display.print("IP: ");
-  display.print(WiFi.localIP());
-  display.display();
-  delay(1000);
-
-  // ====== Initialize Web Service ======
-  int port = PORT;
-  webService = new WebService(port, thermostat);
+  // Show wifi connected on screen
+  display->wifiConnected(WiFi.localIP().toString());
 
   // ====== Initialize temperature sensor ======
   // TODO show DHT initialization on screen
@@ -211,6 +143,13 @@ void setup()
 
   // ====== Get Persistent Storage singleton
   storage = storage->getInstance();
+
+  // ====== Get Thermostat singleton
+  thermostat = thermostat->getInstance();
+
+  // ====== Initialize Web Service ======
+  int port = PORT;
+  webService = new WebService(port);
 }
 
 unsigned long lastDHTUpdateTime = 0;
@@ -266,79 +205,6 @@ void loop()
     digitalWrite(FURNACE_RELAY_PIN, HIGH);
   }
 
-  // ====== Update Display ======
-  // Clear the screen buffer
-  display.clearDisplay();
-
-  display.setTextColor(SSD1306_WHITE);
-
-  //current temperature
-  display.setTextSize(3);
-  display.setCursor(7, 12);
-  if (isnan(currentTemperature))
-  {
-    display.print("NAN");
-  }
-  else
-  {
-    if (storage->getSettingScreenImperial())
-    {
-      display.print((uint8_t)round(celsiusToFahrenheit(currentTemperature)));
-      display.print("F");
-    }
-    else
-    {
-      display.print((uint8_t)round(currentTemperature));
-      display.print("C");
-    }
-  }
-  //Show that temperature is remote
-  if (storage->getSettingUseRemoteTemperature())
-  {
-    display.setTextSize(1);
-    display.print("R");
-  }
-
-  //humidity
-  display.setTextSize(2);
-  display.setCursor(80, 5);
-  if (isnan(currentHumidity))
-  {
-    display.print("NAN");
-  }
-  else
-  {
-    display.print((uint8_t)currentHumidity);
-    display.print("%");
-  }
-
-  if ((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC)
-  {
-    //setpoint
-    display.setTextSize(2);
-    display.setCursor(80, 25);
-    if (storage->getSettingScreenImperial())
-    {
-      display.print((uint8_t)celsiusToFahrenheit(thermostat->getSetpoint()));
-      display.print("F");
-    }
-    else
-    {
-      display.print((uint8_t)thermostat->getSetpoint());
-      display.print("C");
-    }
-  }
-
-  //mode
-  display.setTextSize(1);
-  display.setCursor(20, 50);
-  display.print(thermostat->getModeString());
-
-  //state
-  display.setTextSize(1);
-  display.setCursor(80, 50);
-  display.print(thermostat->getStateString());
-
-  //Update screen
-  display.display();
+  // Update display
+  display->main(currentTemperature, currentHumidity);
 }
