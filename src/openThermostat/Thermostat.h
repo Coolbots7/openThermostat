@@ -38,14 +38,20 @@ private:
 public:
   enum ThermostatMode
   {
-    MANUAL = 0,
-    AUTOMATIC = 1
+    OFF = 0,
+    HEAT = 1,
+    //COOL = 2,
+    AUTOMATIC = 3,
+    //RESUME = 5,
+    //FAN_ONLY = 6
   };
 
   enum ThermostatState
   {
-    OFF = 0,
-    HEATING = 1
+    IDLE = 0,
+    HEATING = 1,
+    //COOLING = 2,
+    //FAN_ONLY = 3
   };
 
   // Singleton
@@ -102,9 +108,15 @@ public:
     {
 
       // Mode state machine
-      if (getMode() == MANUAL)
+      if (getMode() == OFF)
       {
-        //Do nothing
+        //set state to IDLE
+        setState(IDLE);
+      }
+      else if (getMode() == HEAT)
+      {
+        //set state to HEATING
+        setState(HEATING);
       }
       else if (getMode() == AUTOMATIC)
       {
@@ -116,12 +128,12 @@ public:
           // Update thermostat state
           if (currentTemperature >= getSetpoint() + hysteresis)
           {
-            // Turn off heat
-            setState(OFF);
+            //set state to IDLE
+            setState(IDLE);
           }
           else if (currentTemperature <= getSetpoint() - hysteresis)
           {
-            // Turn on heat
+            //set state to HEATING
             setState(HEATING);
           }
         }
@@ -134,8 +146,8 @@ public:
   //Function to factory reset the EEPROM for the thermostat
   void factoryReset()
   {
-    storage->setCurrentThermostatMode((uint8_t)AUTOMATIC);
-    storage->setCurrentThermostatState((int8_t)OFF);
+    storage->setCurrentThermostatMode((uint8_t)OFF);
+    storage->setCurrentThermostatState((int8_t)IDLE);
     storage->setCurrentSetpoint(DEFAULT_SETPOINT);
   }
 
@@ -167,10 +179,21 @@ public:
     return (ThermostatMode)storage->getCurrentThermostatMode();
   }
 
+  String getModeString()
+  {
+    switch ((ThermostatMode)storage->getCurrentThermostatMode())
+    {
+    case Thermostat::ThermostatMode::OFF:
+      return "off";
+    case Thermostat::ThermostatMode::HEAT:
+      return "heat";
+    case Thermostat::ThermostatMode::AUTOMATIC:
+      return "auto";
+    }
+  }
+
   void setState(ThermostatState state)
   {
-    //set mode to manual
-    storage->setCurrentThermostatMode((uint8_t)MANUAL);
     //set current state
     storage->setCurrentThermostatState((int8_t)state);
   }
@@ -178,6 +201,17 @@ public:
   ThermostatState getState()
   {
     return (ThermostatState)storage->getCurrentThermostatState();
+  }
+
+  String getStateString()
+  {
+    switch ((ThermostatState)storage->getCurrentThermostatState())
+    {
+    case Thermostat::ThermostatState::IDLE:
+      return "idle";
+    case Thermostat::ThermostatState::HEATING:
+      return "heating";
+    }
   }
 };
 

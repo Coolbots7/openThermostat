@@ -257,7 +257,7 @@ void loop()
 
   //Update thermostat
   Thermostat::ThermostatState state = thermostat->update(currentTemperature);
-  if (state == Thermostat::ThermostatState::OFF)
+  if (state == Thermostat::ThermostatState::IDLE)
   {
     digitalWrite(FURNACE_RELAY_PIN, LOW);
   }
@@ -332,12 +332,12 @@ void loop()
   //mode
   display.setTextSize(1);
   display.setCursor(20, 50);
-  display.print((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::MANUAL ? "Manual" : "Auto");
+  display.print(thermostat->getModeString());
 
   //state
   display.setTextSize(1);
   display.setCursor(80, 50);
-  display.print((Thermostat::ThermostatState)thermostat->getState() == Thermostat::ThermostatState::OFF ? "Off" : "Heat");
+  display.print(thermostat->getStateString());
 
   //Update screen
   display.display();

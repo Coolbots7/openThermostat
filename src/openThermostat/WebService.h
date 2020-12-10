@@ -1,3 +1,6 @@
+#include <unordered_map>
+#include <string>
+
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266Webserver.h>
@@ -40,19 +43,6 @@ private:
         return "";
     }
 
-    String methodToString(int method)
-    {
-        switch (method)
-        {
-        case HTTP_GET:
-            return "GET";
-        case HTTP_POST:
-            return "POST";
-        case HTTP_PUT:
-            return "PUT";
-        }
-    }
-
     String statusJSON(bool useImperialUnits = false)
     {
         double temperature = currentTemperature;
@@ -64,10 +54,13 @@ private:
             setpoint = celsiusToFahrenheit(setpoint);
         }
 
+        String mode = thermostat->getModeString();
+        String state = thermostat->getStateString();
+
         char temp[400];
         snprintf(temp, 400,
                  "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %0.2f, \"mode\": { \"description\": \"%s\", \"value\": %d }, \"state\": { \"description\": \"%s\", \"value\": %d } }",
-                 temperature, currentHumidity, setpoint, thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC ? "automatic" : "manual", thermostat->getMode(), thermostat->getState() == Thermostat::ThermostatState::OFF ? "off" : "heating", thermostat->getState());
+                 temperature, currentHumidity, setpoint, mode.c_str(), thermostat->getMode(), state.c_str(), thermostat->getState());
 
         return String(temp);
     }
@@ -120,80 +113,30 @@ private:
         if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
         {
             //Get url params
-            String mode = getArgValue("mode", true);
+            String modeStr = getArgValue("mode", true);
 
             //Make sure required params are included
-            if (mode.length() <= 0)
+            if (modeStr.length() <= 0)
             {
                 server->send(400, "application/json", statusJSON(useImperialUnits));
                 return;
             }
 
-            mode.toLowerCase();
+            modeStr.toLowerCase();
 
-            if (mode == "manual")
+            static std::unordered_map<std::string, Thermostat::ThermostatMode> const table = {
+                {"off", Thermostat::ThermostatMode::OFF},
+                {"heat", Thermostat::ThermostatMode::HEAT},
+                {"auto", Thermostat::ThermostatMode::AUTOMATIC}};
+                
+            auto modeFind = table.find(modeStr.c_str());
+            if (modeFind != table.end())
             {
-                //set mode
-                thermostat->setMode(Thermostat::ThermostatMode::MANUAL);
+                //Get mode from table
+                Thermostat::ThermostatMode mode = modeFind->second;
 
-                //return response
-                server->send(200, "application/json", statusJSON(useImperialUnits));
-            }
-            else if (mode == "auto" || mode == "automatic")
-            {
-                //set mode
-                thermostat->setMode(Thermostat::ThermostatMode::AUTOMATIC);
-
-                //return response
-                server->send(200, "application/json", statusJSON(useImperialUnits));
-            }
-            else
-            {
-                //return response
-                server->send(400, "application/json", statusJSON(useImperialUnits));
-            }
-
-            return;
-        }
-
-        server->send(405, "application/json", statusJSON(useImperialUnits));
-    }
-
-    void handleState()
-    {
-        //Get url params
-        String units = getArgValue("units", true);
-
-        bool useImperialUnits = false;
-        if (units.length() > 0)
-        {
-            units.toLowerCase();
-
-            if (units.equals("imperial"))
-            {
-                useImperialUnits = true;
-            }
-        }
-
-        if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
-        {
-            //Get url params
-            String state = getArgValue("state", true);
-
-            state.toLowerCase();
-
-            if (state == "off")
-            {
-                //update state
-                thermostat->setState(Thermostat::ThermostatState::OFF);
-
-                //return response
-                server->send(200, "application/json", statusJSON(useImperialUnits));
-            }
-            else if (state == "heating")
-            {
-                //update state
-                thermostat->setState(Thermostat::ThermostatState::HEATING);
+                //Update mode
+                thermostat->setMode(mode);
 
                 //return response
                 server->send(200, "application/json", statusJSON(useImperialUnits));
@@ -367,7 +310,6 @@ public:
         remoteTemperature = NAN;
 
         server->on("/", std::bind(&WebService::handleRoot, this));
-        server->on("/state", std::bind(&WebService::handleState, this));
         server->on("/mode", std::bind(&WebService::handleMode, this));
         server->on("/setpoint", std::bind(&WebService::handleSetpoint, this));
         server->on("/temperature", std::bind(&WebService::handleTemperature, this));
