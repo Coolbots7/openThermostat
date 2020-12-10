@@ -125,15 +125,20 @@ public:
         display->setTextColor(SSD1306_WHITE);
 
         display->clearDisplay();
-        display->setTextSize(1);
-        display->setTextColor(SSD1306_WHITE);
-        display->setCursor(5, 20);
-        display->print("Connecting to network: ");
-        display->print(ssid);
-        display->setCursor(30, 30);
 
+        display->setCursor(SCREEN_WIDTH/2-40, SCREEN_HEIGHT/2-30);
+        display->print("Connecting to");
+
+        display->setCursor(SCREEN_WIDTH/2-37, SCREEN_HEIGHT/2-15);
+        display->print("WiFi Network");
+
+        display->setCursor(SCREEN_WIDTH/2-(ssid.length()/2 * 8), SCREEN_HEIGHT/2);
+        display->print(ssid);
+
+        display->setCursor(SCREEN_WIDTH/2-5, SCREEN_HEIGHT/2+25);
         display->print(wifiLoading ? "-" : "|");
         wifiLoading = !wifiLoading;
+
         display->display();
     }
 
