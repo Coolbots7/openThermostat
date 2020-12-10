@@ -63,8 +63,7 @@ float currentHumidity = NAN;
 //TODO factory reset settings
 PersistentStorage *storage;
 
-// Thermostat *thermostat = thermostat->getInstance();
-Thermostat *thermostat = new Thermostat();
+Thermostat *thermostat;
 
 WebService *webService;
 
@@ -201,16 +200,19 @@ void setup()
   display.display();
   delay(1000);
 
-  // ====== Initialize Web Service ======
-  int port = PORT;
-  webService = new WebService(port, thermostat);
-
   // ====== Initialize temperature sensor ======
   // TODO show DHT initialization on screen
   dht.begin();
 
   // ====== Get Persistent Storage singleton
   storage = storage->getInstance();
+
+  // ====== Get Thermostat singleton
+  thermostat = thermostat->getInstance();
+
+  // ====== Initialize Web Service ======
+  int port = PORT;
+  webService = new WebService(port);
 }
 
 unsigned long lastDHTUpdateTime = 0;

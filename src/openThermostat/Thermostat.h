@@ -35,35 +35,6 @@ private:
 
   static Thermostat *instance;
 
-public:
-  enum ThermostatMode
-  {
-    OFF = 0,
-    HEAT = 1,
-    //COOL = 2,
-    AUTOMATIC = 3,
-    //RESUME = 5,
-    //FAN_ONLY = 6
-  };
-
-  enum ThermostatState
-  {
-    IDLE = 0,
-    HEATING = 1,
-    //COOLING = 2,
-    //FAN_ONLY = 3
-  };
-
-  // Singleton
-  static Thermostat *getInstance()
-  {
-    if (!instance)
-    {
-      instance = new Thermostat;
-    }
-    return instance;
-  }
-
   Thermostat()
   {
     lastStateChangeTime = 0;
@@ -99,6 +70,37 @@ public:
 
     // ====== Initialize Hysteresis ======
     hysteresis = HYSTERESIS;
+
+    //TODO check hysteresis is less than minimum setpoint range
+  }
+
+public:
+  enum ThermostatMode
+  {
+    OFF = 0,
+    HEAT = 1,
+    //COOL = 2,
+    AUTOMATIC = 3,
+    //RESUME = 5,
+    //FAN_ONLY = 6
+  };
+
+  enum ThermostatState
+  {
+    IDLE = 0,
+    HEATING = 1,
+    //COOLING = 2,
+    //FAN_ONLY = 3
+  };
+
+  // Singleton
+  static Thermostat *getInstance()
+  {
+    if (!instance)
+    {
+      instance = new Thermostat;
+    }
+    return instance;
   }
 
   ThermostatState update(double currentTemperature)
@@ -214,5 +216,7 @@ public:
     }
   }
 };
+
+Thermostat *Thermostat::instance = 0;
 
 #endif
