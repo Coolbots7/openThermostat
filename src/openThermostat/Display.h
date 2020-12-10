@@ -127,16 +127,16 @@ public:
 
         display->clearDisplay();
 
-        display->setCursor(SCREEN_WIDTH/2-40, SCREEN_HEIGHT/2-30);
+        display->setCursor(SCREEN_WIDTH / 2 - 40, SCREEN_HEIGHT / 2 - 30);
         display->print("Connecting to");
 
-        display->setCursor(SCREEN_WIDTH/2-37, SCREEN_HEIGHT/2-15);
+        display->setCursor(SCREEN_WIDTH / 2 - 37, SCREEN_HEIGHT / 2 - 15);
         display->print("WiFi Network");
 
-        display->setCursor(SCREEN_WIDTH/2-(ssid.length()/2 * 8), SCREEN_HEIGHT/2);
+        display->setCursor(SCREEN_WIDTH / 2 - (ssid.length() / 2 * 8), SCREEN_HEIGHT / 2);
         display->print(ssid);
 
-        display->setCursor(SCREEN_WIDTH/2-5, SCREEN_HEIGHT/2+25);
+        display->setCursor(SCREEN_WIDTH / 2 - 5, SCREEN_HEIGHT / 2 + 25);
         display->print(wifiLoading ? "-" : "|");
         wifiLoading = !wifiLoading;
 
@@ -151,11 +151,11 @@ public:
 
         display->clearDisplay();
 
-        display->setCursor(SCREEN_WIDTH/2-29, SCREEN_HEIGHT/2-15);
+        display->setCursor(SCREEN_WIDTH / 2 - 29, SCREEN_HEIGHT / 2 - 15);
         display->print("Connected!");
 
         String ipStr = "IP: " + ip;
-        display->setCursor(SCREEN_WIDTH/2-(ipStr.length()/2 * 6), SCREEN_HEIGHT/2+15);
+        display->setCursor(SCREEN_WIDTH / 2 - (ipStr.length() / 2 * 6), SCREEN_HEIGHT / 2 + 15);
         display->print(ipStr);
 
         display->display();
@@ -166,44 +166,70 @@ public:
     //TODO main
     void main(double currentTemperature, double currentHumidity)
     {
-        display->setTextSize(1);
         display->setTextColor(SSD1306_WHITE);
 
         // Clear the screen buffer
         display->clearDisplay();
 
-        display->setTextColor(SSD1306_WHITE);
-
         //current temperature
-        display->setTextSize(3);
-        display->setCursor(7, 12);
+        display->setCursor(10, 4);
         if (isnan(currentTemperature))
         {
+            display->setTextSize(3);
             display->print("NAN");
         }
         else
         {
             if (storage->getSettingScreenImperial())
             {
+                display->setTextSize(4);
                 display->print((uint8_t)round(celsiusToFahrenheit(currentTemperature)));
+                display->setTextSize(3);
+                display->setCursor(10 + 4 * 6 * 2, 11);
                 display->print("F");
             }
             else
             {
+                display->setTextSize(4);
                 display->print((uint8_t)round(currentTemperature));
+                display->setTextSize(3);
+                display->setCursor(10 + 4 * 6 * 2, 11);
                 display->print("C");
             }
         }
         //Show that temperature is remote
         if (storage->getSettingUseRemoteTemperature())
         {
+            display->setCursor(10 + 4 * 6 * 2 + 6 * 3, 25);
             display->setTextSize(1);
             display->print("R");
         }
 
+        //setpoint
+        if ((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC)
+        {
+            display->setCursor(90, 19);
+            if (storage->getSettingScreenImperial())
+            {
+                display->setTextSize(2);
+                display->print((uint8_t)celsiusToFahrenheit(thermostat->getSetpoint()));
+                display->setTextSize(1);
+                display->setCursor(90 + 6 * 2 * 2, 26);
+                display->print("F");
+            }
+            else
+            {
+                display->setTextSize(2);
+                display->print((uint8_t)thermostat->getSetpoint());
+                display->setTextSize(1);
+                display->setCursor(90 + 6 * 2 * 2, 26);
+                display->print("C");
+            }
+        }
+
         //humidity
         display->setTextSize(2);
-        display->setCursor(80, 5);
+        display->setCursor(22, 48);
         if (isnan(currentHumidity))
         {
             display->print("NAN");
@@ -211,35 +237,22 @@ public:
         else
         {
             display->print((uint8_t)currentHumidity);
+            display->setTextSize(1);
+            display->setCursor(22+2*6*2, 55);
             display->print("%");
         }
 
-        if ((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC)
-        {
-            //setpoint
-            display->setTextSize(2);
-            display->setCursor(80, 25);
-            if (storage->getSettingScreenImperial())
-            {
-                display->print((uint8_t)celsiusToFahrenheit(thermostat->getSetpoint()));
-                display->print("F");
-            }
-            else
-            {
-                display->print((uint8_t)thermostat->getSetpoint());
-                display->print("C");
-            }
-        }
-
         //mode
+        String modeStr = thermostat->getModeString();
+        modeStr.toUpperCase();
         display->setTextSize(1);
-        display->setCursor(20, 50);
-        display->print(thermostat->getModeString());
+        display->setCursor(77, 52);
+        display->print(modeStr);
 
-        //state
-        display->setTextSize(1);
-        display->setCursor(80, 50);
-        display->print(thermostat->getStateString());
+        // //state
+        // display->setTextSize(1);
+        // display->setCursor(80, 50);
+        // display->print(thermostat->getStateString());
 
         //Update screen
         display->display();
