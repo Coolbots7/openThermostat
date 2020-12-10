@@ -19,6 +19,8 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 
+#define WELCOME_PAUSE 1500
+
 class Display
 {
 private:
@@ -99,15 +101,21 @@ public:
         display->setTextSize(1);
         display->setTextColor(SSD1306_WHITE);
 
+        display->clearDisplay();
+
         //show welcome screen
-        display->setCursor(35, 20);
-        display->print("Welcome to");
-        display->setCursor(15, 40);
-        display->print("Open Thermostat");
+        display->setCursor(SCREEN_WIDTH / 2 - 23, SCREEN_HEIGHT / 2 - 20);
+        display->print("Welcome");
+
+        display->setCursor(SCREEN_WIDTH / 2 - 5, SCREEN_HEIGHT / 2 - 5);
+        display->print("To");
+
+        display->setCursor(SCREEN_WIDTH / 2 - 40, SCREEN_HEIGHT / 2 + 10);
+        display->print("openThermostat");
+
         display->display();
 
-        //TODO define
-        delay(1500);
+        delay(WELCOME_PAUSE);
     }
 
     // Wifi connecting
