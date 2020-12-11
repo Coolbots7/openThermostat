@@ -14,7 +14,7 @@
 #define MINIMUM_SETPOINT_RANGE 10
 
 #ifndef HYSTERESIS
-#define HYSTERESIS 1.5
+#define HYSTERESIS 1
 #endif
 
 #ifndef DEFAULT_SETPOINT
