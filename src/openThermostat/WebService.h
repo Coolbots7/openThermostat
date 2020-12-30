@@ -126,7 +126,8 @@ private:
       static std::unordered_map<std::string, Thermostat::ThermostatMode> const table = {
           {"off", Thermostat::ThermostatMode::OFF},
           {"heat", Thermostat::ThermostatMode::HEAT},
-          {"auto", Thermostat::ThermostatMode::AUTOMATIC}};
+          {"auto", Thermostat::ThermostatMode::AUTOMATIC},
+          {"fan-only", Thermostat::ThermostatMode::FAN_ONLY}};
 
       auto modeFind = table.find(modeStr.c_str());
       if (modeFind != table.end())

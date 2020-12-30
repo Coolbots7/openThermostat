@@ -32,6 +32,7 @@
 
 // ====== Relay Settings ======
 #define HEAT_RELAY_PIN 26
+#define FAN_RELAY_PIN 14
 
 
 // ====== Environmental Sensor Settings ======
@@ -63,6 +64,9 @@ void setup()
   // ====== Initialize relays ======
   pinMode(HEAT_RELAY_PIN, OUTPUT);
   digitalWrite(HEAT_RELAY_PIN, LOW);
+
+  pinMode(FAN_RELAY_PIN, OUTPUT);
+  digitalWrite(FAN_RELAY_PIN, LOW);
 
   // ====== Create Display ======
   display = new Display();
@@ -218,12 +222,19 @@ void loop()
   if (state == Thermostat::ThermostatState::IDLE)
   {
     digitalWrite(HEAT_RELAY_PIN, LOW);
+    digitalWrite(FAN_RELAY_PIN, LOW);
   }
   else if (state == Thermostat::ThermostatState::HEATING)
   {
     digitalWrite(HEAT_RELAY_PIN, HIGH);
+    digitalWrite(FAN_RELAY_PIN, LOW);
   }
-
+  else if (state == Thermostat::ThermostatState::FAN)
+  {
+    digitalWrite(HEAT_RELAY_PIN, LOW);
+    digitalWrite(FAN_RELAY_PIN, HIGH);
+  }
+  
   // Update display
   display->main(currentTemperature, currentHumidity);
 }
