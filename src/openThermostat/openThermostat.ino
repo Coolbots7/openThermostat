@@ -27,7 +27,7 @@
 #endif
 
 // ====== Relay Settings ======
-#define FURNACE_RELAY_PIN 16
+#define HEAT_RELAY_PIN 26
 
 // ====== Temperature Sensor Settings ======
 #define DHT_PIN 0
@@ -61,8 +61,8 @@ void setup()
   Serial.begin(115200);
 
   // ====== Initialize relays ======
-  pinMode(FURNACE_RELAY_PIN, OUTPUT);
-  digitalWrite(FURNACE_RELAY_PIN, LOW);
+  pinMode(HEAT_RELAY_PIN, OUTPUT);
+  digitalWrite(HEAT_RELAY_PIN, LOW);
 
   // ====== Create Display ======
   display = new Display();
@@ -211,11 +211,11 @@ void loop()
   Thermostat::ThermostatState state = thermostat->update(currentTemperature);
   if (state == Thermostat::ThermostatState::IDLE)
   {
-    digitalWrite(FURNACE_RELAY_PIN, LOW);
+    digitalWrite(HEAT_RELAY_PIN, LOW);
   }
   else if (state == Thermostat::ThermostatState::HEATING)
   {
-    digitalWrite(FURNACE_RELAY_PIN, HIGH);
+    digitalWrite(HEAT_RELAY_PIN, HIGH);
   }
 
   // Update display
