@@ -13,7 +13,7 @@
 
 // ====== Factory Reset Settings ======
 #define FACTORY_RESET_TIME 5000
-#define FACTORY_RESET_PIN 14
+#define FACTORY_RESET_PIN 2
 
 // ====== WiFi Settings ======
 // Override SSID and password definitions in wifi.h which is excluded from source control
