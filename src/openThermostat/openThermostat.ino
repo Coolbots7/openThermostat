@@ -4,7 +4,9 @@
 #include <ESP8266mDNS.h>
 #include "wifi.h"
 
-#include <DHT.h>
+#include <SPI.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 
 #include "Display.h"
 #include "PersistentStorage.h"
@@ -29,16 +31,12 @@
 // ====== Relay Settings ======
 #define HEAT_RELAY_PIN 26
 
-// ====== Temperature Sensor Settings ======
-#define DHT_PIN 0
 
-#define DHT_TYPE DHT11 // DHT 11
-//#define DHT_TYPE DHT22   // DHT 22  (AM2302), AM2321
-//#define DHT_TYPE DHT21   // DHT 21 (AM2301)
+// ====== Environmental Sensor Settings ======
+#define BME_CS_PIN 33
+Adafruit_BME280 bme(BME_CS_PIN); // hardware SPI
 
-#define DHT_UPDATE_PERIOD 2000
-
-DHT dht(DHT_PIN, DHT_TYPE);
+#define ENVIRONMENTAL_SENSOR_UPDATE_PERIOD 2000
 
 // ====== Globals ======
 
@@ -151,8 +149,14 @@ void setup()
   display->wifiConnected(WiFi.localIP().toString());
 
   // ====== Initialize temperature sensor ======
-  // TODO show DHT initialization on screen
-  dht.begin();
+  // TODO show temperature initialization on screen
+  if (!bme.begin())
+  {
+    Serial.println("Failed to initialize BME sensor");
+    for (;;)
+    {
+    }
+  }
 
   // ====== Get Persistent Storage singleton
   storage = storage->getInstance();
@@ -165,25 +169,25 @@ void setup()
   webService = new WebService(port);
 }
 
-unsigned long lastDHTUpdateTime = 0;
+unsigned long lastEnvironemntalSensorUpdateTime = 0;
 
 void loop()
 {
 
   // Update temperature and humidity
-  if (millis() >= lastDHTUpdateTime + DHT_UPDATE_PERIOD)
+  if (millis() >= lastEnvironemntalSensorUpdateTime + ENVIRONMENTAL_SENSOR_UPDATE_PERIOD)
   {
-    lastDHTUpdateTime = millis();
+    lastEnvironemntalSensorUpdateTime = millis();
 
     // Reading temperature or humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-    float tempHumidity = dht.readHumidity();
+    float tempHumidity = bme.readHumidity();
     // Read temperature as Celsius (the default)
-    float tempTemperature = dht.readTemperature();
+    float tempTemperature = bme.readTemperature();
 
     if (isnan(tempHumidity) || isnan(tempTemperature))
     {
-      Serial.println(F("Failed to read from DHT sensor!"));
+      Serial.println(F("Failed to read from environmental sensor!"));
     }
     else
     {
