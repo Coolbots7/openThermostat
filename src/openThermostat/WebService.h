@@ -46,20 +46,22 @@ private:
   String statusJSON(bool useImperialUnits = false)
   {
     double temperature = currentTemperature;
-    double setpoint = thermostat->getSetpoint();
+    double setpoint_low = thermostat->getSetpointLow();
+    double setpoint_high = thermostat->getSetpointHigh();
 
     if (useImperialUnits)
     {
       temperature = celsiusToFahrenheit(temperature);
-      setpoint = celsiusToFahrenheit(setpoint);
+      setpoint_low = celsiusToFahrenheit(setpoint_low);
+      setpoint_high = celsiusToFahrenheit(setpoint_high);
     }
 
     char temp[400];
     //Note: Workaround for error when inserting mode and state descriptions with printf
-    String json = "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"setpoint\": %0.2f, \"mode\": { \"description\": \"" + thermostat->getModeString() + "\", \"value\": %d }, \"state\": { \"description\": \"" + thermostat->getStateString() + "\", \"value\": %d } }";
+    String json = "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, { \"setpoint_low\": %0.2f, \"setpoint_high\": %0.2f }, \"mode\": { \"description\": \"" + thermostat->getModeString() + "\", \"value\": %d }, \"state\": { \"description\": \"" + thermostat->getStateString() + "\", \"value\": %d } }";
     sprintf(temp,
             json.c_str(),
-            temperature, currentHumidity, setpoint, thermostat->getMode(), thermostat->getState());
+            temperature, currentHumidity, setpoint_low, setpoint_high, thermostat->getMode(), thermostat->getState());
 
     return String(temp);
   }
@@ -172,32 +174,53 @@ private:
 
     if (server->method() == HTTP_POST || server->method() == HTTP_PUT)
     {
+      bool success = true;
+
       //Get url params
-      String setpointStr = getArgValue("setpoint", true);
+      double setpointLow = 0;
+      String setpointLowStr = getArgValue("low", true);
+      double setpointHigh = 0;
+      String setpointHighStr = getArgValue("high", true);
 
-      //Make sure required params are included
-      if (setpointStr.length() <= 0)
+      //Setpoint lower limit
+      if (setpointLowStr.length() > 0)
       {
-        server->send(400, "application/json", statusJSON(useImperialUnits));
-        return;
+        // Convert argument to integer
+        // Note: cast to int returns 0 if invalid
+        setpointLow = setpointLowStr.toDouble();
+
+        if (setpointLow != 0)
+        {
+          if (useImperialUnits)
+          {
+            setpointLow = fahrenheitToCelsius(setpointLow);
+          }
+          
+          success = thermostat->setSetpointLow(setpointLow);
+        }
       }
 
-      // Convert argument to integer
-      // Note: cast to int returns 0 if invalid
-      double setpoint = setpointStr.toDouble();
-
-      if (useImperialUnits)
+      //setpoint upper limit
+      if (setpointHighStr.length() > 0)
       {
-        setpoint = fahrenheitToCelsius(setpoint);
+        // Convert argument to integer
+        // Note: cast to int returns 0 if invalid
+        setpointHigh = setpointHighStr.toDouble();
+
+        if (setpointHigh != 0)
+        {
+          if (useImperialUnits)
+          {
+            setpointHigh = fahrenheitToCelsius(setpointHigh);
+          }
+
+          success = thermostat->setSetpointHigh(setpointHigh);
+        }
       }
 
-      //update setpoint
-      if (setpoint != 0 && thermostat->setSetpoint(setpoint))
+      //return response
+      if (success)
       {
-        //Set thermostat to automatic
-        thermostat->setMode(Thermostat::ThermostatMode::AUTOMATIC);
-
-        //return response
         server->send(200, "application/json", statusJSON(useImperialUnits));
       }
       else

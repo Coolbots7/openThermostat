@@ -42,6 +42,13 @@ Adafruit_BME280 bme(BME_CS_PIN); // hardware SPI
 
 #define ENVIRONMENTAL_SENSOR_UPDATE_PERIOD 2000
 
+// ====== Thermostat ======
+#ifndef DEFAULT_HEAT_SETPOINT
+#define DEFAULT_SETPOINT_LOW 22
+#define DEFAULT_SETPOINT_HIGH 25
+#endif
+
+
 // ====== Globals ======
 
 float currentTemperature = NAN;
@@ -96,9 +103,8 @@ void setup()
       display->factoryResetting();
       Serial.print("Resetting...");
 
-      storage->setCurrentThermostatMode(0);
-      storage->setCurrentThermostatState(0);
-      storage->setCurrentSetpoint(22);
+      storage->setSetpointLow(DEFAULT_SETPOINT_LOW);
+      storage->setSetpointHigh(DEFAULT_SETPOINT_HIGH);
       Serial.print("thermostat reset...");
 
       storage->setSettingScreenImperial(false);
@@ -235,7 +241,8 @@ void loop()
     digitalWrite(COOL_RELAY_PIN, LOW);
     digitalWrite(FAN_RELAY_PIN, LOW);
   }
-  else if(state == Thermostat::ThermostatState::COOLING) {    
+  else if (state == Thermostat::ThermostatState::COOLING)
+  {
     digitalWrite(HEAT_RELAY_PIN, LOW);
     digitalWrite(COOL_RELAY_PIN, HIGH);
     digitalWrite(FAN_RELAY_PIN, LOW);
@@ -246,7 +253,7 @@ void loop()
     digitalWrite(COOL_RELAY_PIN, LOW);
     digitalWrite(FAN_RELAY_PIN, HIGH);
   }
-  
+
   // Update display
   display->main(currentTemperature, currentHumidity);
 }

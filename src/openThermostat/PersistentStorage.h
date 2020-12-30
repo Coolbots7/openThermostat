@@ -10,7 +10,8 @@
 // ====== EEPROM Addresses ======
 #define EEPROM_CURRENT_MODE 0     // 1 byte
 #define EEPROM_CURRENT_STATE 1    // 1 byte
-#define EEPROM_CURRENT_SETPOINT 2 // 4 bytes
+#define EEPROM_CURRENT_SETPOINT_LOW 2 // 8 bytes
+#define EEPROM_CURRENT_SETPOINT_HIGH 10 // 8 bytes
 
 #define EEPROM_SETTING_SCREEN_UNIT 40        // 1 byte
 #define EEPROM_SETTING_REMOTE_TEMPERATURE 41 // 4 bytes
@@ -86,16 +87,28 @@ class PersistentStorage
       return EEPROM.read(EEPROM_CURRENT_STATE);
     }
 
-    // Current Setpoint
-    void setCurrentSetpoint(double setpoint)
+    // Current Heat Setpoint
+    void setSetpointLow(double setpoint)
     {
-      EEPROM_writeDouble(EEPROM_CURRENT_SETPOINT, setpoint);
+      EEPROM_writeDouble(EEPROM_CURRENT_SETPOINT_LOW, setpoint);
       EEPROM.commit();
     }
 
-    double getCurrentSetpoint()
+    double getSetpointLow()
     {
-      return EEPROM_readDouble(EEPROM_CURRENT_SETPOINT);
+      return EEPROM_readDouble(EEPROM_CURRENT_SETPOINT_LOW);
+    }
+
+    // Current Cool Setpoint
+    void setSetpointHigh(double setpoint)
+    {
+      EEPROM_writeDouble(EEPROM_CURRENT_SETPOINT_HIGH, setpoint);
+      EEPROM.commit();
+    }
+
+    double getSetpointHigh()
+    {
+      return EEPROM_readDouble(EEPROM_CURRENT_SETPOINT_HIGH);
     }
 
     // Setting Screen Unit

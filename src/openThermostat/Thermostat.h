@@ -17,10 +17,6 @@
 #define HYSTERESIS 1
 #endif
 
-#ifndef DEFAULT_SETPOINT
-#define DEFAULT_SETPOINT 22
-#endif
-
 #ifndef STATE_CHANGE_DELAY
 #define STATE_CHANGE_DELAY 30000
 #endif
@@ -135,15 +131,31 @@ public:
           lastStateChangeTime = millis();
 
           // Update thermostat state
-          if (currentTemperature >= getSetpoint() + hysteresis)
+
+          //If current temperature is greater than setpoint plus hysteresis, turn off heating
+          if (currentTemperature >= getSetpointLow() + hysteresis)
           {
             //set state to IDLE
             setState(IDLE);
           }
-          else if (currentTemperature <= getSetpoint() - hysteresis)
+          //Else, if current temperature is less than setpoint minus hysteresis, turn on heating
+          else if (currentTemperature <= getSetpointLow() - hysteresis)
           {
             //set state to HEATING
             setState(HEATING);
+          }
+
+          //If current temperature is less than setpoint minus hysteresis, turn off cooling
+          if (currentTemperature <= getSetpointHigh() - hysteresis)
+          {
+            //set state to IDLE
+            setState(IDLE);
+          }
+          //Else, if current  temperature is greater than setpoint plus hysteresis, turn on cooling
+          else if (currentTemperature >= getSetpointHigh() + hysteresis)
+          {
+            //set state to COOLING
+            setState(COOLING);
           }
         }
       }
@@ -157,20 +169,36 @@ public:
   }
 
   // ====== Setters & Getters ======
-  bool setSetpoint(double setpoint)
+  bool setSetpointLow(double setpoint)
   {
     if (setpoint >= SETPOINT_MIN && setpoint <= SETPOINT_MAX)
     {
-      storage->setCurrentSetpoint(setpoint);
+      storage->setSetpointLow(setpoint);
       return true;
     }
 
     return false;
   }
 
-  double getSetpoint()
+  double getSetpointLow()
   {
-    return storage->getCurrentSetpoint();
+    return storage->getSetpointLow();
+  }
+
+  bool setSetpointHigh(double setpoint)
+  {
+    if (setpoint >= SETPOINT_MIN && setpoint <= SETPOINT_MAX)
+    {
+      storage->setSetpointHigh(setpoint);
+      return true;
+    }
+
+    return false;
+  }
+
+  double getSetpointHigh()
+  {
+    return storage->getSetpointHigh();
   }
 
   void setMode(ThermostatMode mode)
