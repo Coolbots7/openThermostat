@@ -185,6 +185,8 @@ class Thermostat
           return "heat";
         case Thermostat::ThermostatMode::AUTOMATIC:
           return "auto";
+        default:
+          return "";
       }
     }
 
@@ -207,6 +209,8 @@ class Thermostat
           return "idle";
         case Thermostat::ThermostatState::HEATING:
           return "heating";
+        default:
+          return "";
       }
     }
 };
