@@ -126,6 +126,7 @@ private:
       static std::unordered_map<std::string, Thermostat::ThermostatMode> const table = {
           {"off", Thermostat::ThermostatMode::OFF},
           {"heat", Thermostat::ThermostatMode::HEAT},
+          {"cool", Thermostat::ThermostatMode::COOL},
           {"auto", Thermostat::ThermostatMode::AUTOMATIC},
           {"fan-only", Thermostat::ThermostatMode::FAN_ONLY}};
 

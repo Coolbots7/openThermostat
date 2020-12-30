@@ -81,7 +81,7 @@ public:
   {
     OFF = 0,
     HEAT = 1,
-    //COOL = 2,
+    COOL = 2,
     AUTOMATIC = 3,
     //RESUME = 5,
     FAN_ONLY = 6
@@ -91,7 +91,7 @@ public:
   {
     IDLE = 0,
     HEATING = 1,
-    //COOLING = 2,
+    COOLING = 2,
     FAN = 3
   };
 
@@ -121,6 +121,11 @@ public:
       {
         //set state to HEATING
         setState(HEATING);
+      }
+      else if (getMode() == COOL)
+      {
+        //set state to COOLING
+        setState(COOLING);
       }
       else if (getMode() == AUTOMATIC)
       {
@@ -187,6 +192,8 @@ public:
       return "off";
     case Thermostat::ThermostatMode::HEAT:
       return "heat";
+    case Thermostat::ThermostatMode::COOL:
+      return "cool";
     case Thermostat::ThermostatMode::AUTOMATIC:
       return "auto";
     case Thermostat::ThermostatMode::FAN_ONLY:
@@ -215,6 +222,8 @@ public:
       return "idle";
     case Thermostat::ThermostatState::HEATING:
       return "heating";
+    case Thermostat::ThermostatState::COOLING:
+      return "cooling";
     case Thermostat::ThermostatState::FAN:
       return "fan";
     default:

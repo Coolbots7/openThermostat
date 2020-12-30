@@ -32,6 +32,7 @@
 
 // ====== Relay Settings ======
 #define HEAT_RELAY_PIN 26
+#define COOL_RELAY_PIN 27
 #define FAN_RELAY_PIN 14
 
 
@@ -64,6 +65,9 @@ void setup()
   // ====== Initialize relays ======
   pinMode(HEAT_RELAY_PIN, OUTPUT);
   digitalWrite(HEAT_RELAY_PIN, LOW);
+
+  pinMode(COOL_RELAY_PIN, OUTPUT);
+  digitalWrite(COOL_RELAY_PIN, LOW);
 
   pinMode(FAN_RELAY_PIN, OUTPUT);
   digitalWrite(FAN_RELAY_PIN, LOW);
@@ -222,16 +226,24 @@ void loop()
   if (state == Thermostat::ThermostatState::IDLE)
   {
     digitalWrite(HEAT_RELAY_PIN, LOW);
+    digitalWrite(COOL_RELAY_PIN, LOW);
     digitalWrite(FAN_RELAY_PIN, LOW);
   }
   else if (state == Thermostat::ThermostatState::HEATING)
   {
     digitalWrite(HEAT_RELAY_PIN, HIGH);
+    digitalWrite(COOL_RELAY_PIN, LOW);
+    digitalWrite(FAN_RELAY_PIN, LOW);
+  }
+  else if(state == Thermostat::ThermostatState::COOLING) {    
+    digitalWrite(HEAT_RELAY_PIN, LOW);
+    digitalWrite(COOL_RELAY_PIN, HIGH);
     digitalWrite(FAN_RELAY_PIN, LOW);
   }
   else if (state == Thermostat::ThermostatState::FAN)
   {
     digitalWrite(HEAT_RELAY_PIN, LOW);
+    digitalWrite(COOL_RELAY_PIN, LOW);
     digitalWrite(FAN_RELAY_PIN, HIGH);
   }
   
