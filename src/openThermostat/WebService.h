@@ -58,7 +58,7 @@ private:
 
     char temp[400];
     //Note: Workaround for error when inserting mode and state descriptions with printf
-    String json = "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, { \"setpoint_low\": %0.2f, \"setpoint_high\": %0.2f }, \"mode\": { \"description\": \"" + thermostat->getModeString() + "\", \"value\": %d }, \"state\": { \"description\": \"" + thermostat->getStateString() + "\", \"value\": %d } }";
+    String json = "{ \"environment\": { \"temperature\": %0.2f, \"humidity\": %0.2f }, \"thermostat\": { \"setpoint_low\": %0.2f, \"setpoint_high\": %0.2f, \"mode\": { \"description\": \"" + thermostat->getModeString() + "\", \"value\": %d }, \"state\": { \"description\": \"" + thermostat->getStateString() + "\", \"value\": %d } } }";
     sprintf(temp,
             json.c_str(),
             temperature, currentHumidity, setpoint_low, setpoint_high, thermostat->getMode(), thermostat->getState());
