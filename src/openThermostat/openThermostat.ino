@@ -1,8 +1,7 @@
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <WiFiClient.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include "wifi.h"
+#include <WebServer.h>
+#include <ESPmDNS.h>
 
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
@@ -12,6 +11,9 @@
 #include "PersistentStorage.h"
 #include "Thermostat.h"
 #include "WebService.h"
+
+// End user specific config file for WiFi network settings
+#include "wifi.h"
 
 // ====== Factory Reset Settings ======
 #define FACTORY_RESET_TIME 5000
@@ -134,7 +136,7 @@ void setup()
     delay(500);
   }
 
-  if (MDNS.begin("esp8266"))
+  if (MDNS.begin("esp32"))
   {
     Serial.println("MDNS responder started");
   }
