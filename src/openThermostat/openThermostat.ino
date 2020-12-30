@@ -72,22 +72,35 @@ void setup()
   if (digitalRead(FACTORY_RESET_PIN) == HIGH)
   {
     unsigned long factoryResetStartTime = millis();
-    while (millis() < factoryResetStartTime + FACTORY_RESET_TIME)
+    while (millis() < factoryResetStartTime + FACTORY_RESET_TIME && digitalRead(FACTORY_RESET_PIN) == HIGH)
     {
       // Show factory reset pending on screen
       display->factoryResetPending(String(ceil(((factoryResetStartTime + FACTORY_RESET_TIME) - millis()) / 1000)));
+
+      Serial.print("Factory resetting in ");
+      Serial.print(ceil(((factoryResetStartTime + FACTORY_RESET_TIME) - millis()) / 1000));
+      Serial.println(" sec");
+      delay(500);
     }
     if (digitalRead(FACTORY_RESET_PIN) == HIGH)
     {
       //Factory resetting on screen
       display->factoryResetting();
+      Serial.print("Resetting...");
 
-      thermostat->factoryReset();
-      storage->factoryReset();
+      storage->setCurrentThermostatMode(0);
+      storage->setCurrentThermostatState(0);
+      storage->setCurrentSetpoint(22);
+      Serial.print("thermostat reset...");
+
+      storage->setSettingScreenImperial(false);
+      storage->setSettingUseRemoteTemperature(false);
+      Serial.print("storage reset...");
       delay(200);
 
       //Show factory reset on screen
       display->factoryResetComplete();
+      Serial.println("Reset Complete!");
 
       while (digitalRead(FACTORY_RESET_PIN) == HIGH)
       {
