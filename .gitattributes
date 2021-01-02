@@ -89,6 +89,10 @@
 *.tso filter=lfs diff=lfs merge=lfs -text
 *.CAM360 filter=lfs diff=lfs merge=lfs -text
 *.cam360 filter=lfs diff=lfs merge=lfs -text
+*.pro filter=lfs diff=lfs merge=lfs -text
+*.sch filter=lfs diff=lfs merge=lfs -text
+*.kicad_pcb filter=lfs diff=lfs merge=lfs -text
+*.lib filter=lfs diff=lfs merge=lfs -text
 
 # Miscellaneous
 *.zip filter=lfs diff=lfs merge=lfs -text
