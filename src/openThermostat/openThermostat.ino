@@ -35,7 +35,6 @@
 #define COOL_RELAY_PIN 27
 #define FAN_RELAY_PIN 14
 
-
 // ====== Environmental Sensor Settings ======
 #define BME_CS_PIN 33
 Adafruit_BME280 bme(BME_CS_PIN); // hardware SPI
@@ -56,7 +55,6 @@ float currentHumidity = NAN;
 
 Display *display;
 
-//TODO factory reset settings
 PersistentStorage *storage;
 
 Thermostat *thermostat;
@@ -103,6 +101,8 @@ void setup()
       display->factoryResetting();
       Serial.print("Resetting...");
 
+      storage->setCurrentThermostatMode(Thermostat::ThermostatMode::OFF);
+      storage->setCurrentThermostatState(Thermostat::ThermostatState::IDLE);
       storage->setSetpointLow(DEFAULT_SETPOINT_LOW);
       storage->setSetpointHigh(DEFAULT_SETPOINT_HIGH);
       Serial.print("thermostat reset...");

@@ -195,7 +195,7 @@ private:
           {
             setpointLow = fahrenheitToCelsius(setpointLow);
           }
-          
+
           success = thermostat->setSetpointLow(setpointLow);
         }
       }
