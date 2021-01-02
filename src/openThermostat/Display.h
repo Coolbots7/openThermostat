@@ -208,21 +208,36 @@ public:
         //setpoint
         if ((Thermostat::ThermostatMode)thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC)
         {
-            display->setCursor(90, 19);
             if (storage->getSettingScreenImperial())
             {
+                display->setCursor(90, 19);
                 display->setTextSize(2);
-                display->print((uint8_t)celsiusToFahrenheit(thermostat->getSetpoint()));
+                display->print((uint8_t)celsiusToFahrenheit(thermostat->getSetpointLow()));
                 display->setTextSize(1);
                 display->setCursor(90 + 6 * 2 * 2, 26);
+                display->print("F");
+                
+                display->setCursor(90, 30);
+                display->setTextSize(2);
+                display->print((uint8_t)celsiusToFahrenheit(thermostat->getSetpointHigh()));
+                display->setTextSize(1);
+                display->setCursor(90 + 6 * 2 * 2, 37);
                 display->print("F");
             }
             else
             {
+                display->setCursor(90, 19);
                 display->setTextSize(2);
-                display->print((uint8_t)thermostat->getSetpoint());
+                display->print((uint8_t)thermostat->getSetpointLow());
                 display->setTextSize(1);
                 display->setCursor(90 + 6 * 2 * 2, 26);
+                display->print("C");
+
+                display->setCursor(90, 30);
+                display->setTextSize(2);
+                display->print((uint8_t)thermostat->getSetpointHigh());
+                display->setTextSize(1);
+                display->setCursor(90 + 6 * 2 * 2, 37);
                 display->print("C");
             }
         }
@@ -238,7 +253,7 @@ public:
         {
             display->print((uint8_t)currentHumidity);
             display->setTextSize(1);
-            display->setCursor(22+2*6*2, 55);
+            display->setCursor(22 + 2 * 6 * 2, 55);
             display->print("%");
         }
 
