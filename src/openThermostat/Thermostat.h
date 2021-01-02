@@ -132,8 +132,9 @@ public:
 
           // Update thermostat state
 
-          //If current temperature is greater than setpoint plus hysteresis, turn off heating
-          if (currentTemperature >= getSetpointLow() + hysteresis)
+          //If current temperature is greater than setpoint plus hysteresis, turn off heating          
+          //If current temperature is less than setpoint minus hysteresis, turn off cooling
+          if (currentTemperature >= getSetpointLow() + hysteresis && currentTemperature <= getSetpointHigh() - hysteresis)
           {
             //set state to IDLE
             setState(IDLE);
@@ -143,13 +144,6 @@ public:
           {
             //set state to HEATING
             setState(HEATING);
-          }
-
-          //If current temperature is less than setpoint minus hysteresis, turn off cooling
-          if (currentTemperature <= getSetpointHigh() - hysteresis)
-          {
-            //set state to IDLE
-            setState(IDLE);
           }
           //Else, if current  temperature is greater than setpoint plus hysteresis, turn on cooling
           else if (currentTemperature >= getSetpointHigh() + hysteresis)
