@@ -11,6 +11,7 @@
 #include "PersistentStorage.h"
 #include "Thermostat.h"
 #include "WebService.h"
+#include "Button.h"
 
 // End user specific config file for WiFi network settings
 #include "wifi.h"
@@ -51,6 +52,11 @@ Adafruit_BME280 bme(BME_CS_PIN); // hardware SPI
 #define SCREEN_BRIGHTNESS 1
 #define SCREEN_UPDATE_PERIOD 1000
 
+// ====== Button Settings ======
+#define UP_BUTTON_PIN 5
+#define DOWN_BUTTON_PIN 4
+#define MULTI_BUTTON_PIN 15
+
 // ====== Globals ======
 
 float currentTemperature = NAN;
@@ -63,6 +69,10 @@ PersistentStorage *storage;
 Thermostat *thermostat;
 
 WebService *webService;
+
+Button *upButton;
+Button *downButton;
+Button *multiButton;
 
 void (*resetFunc)(void) = 0; //declare reset function @ address 0
 
@@ -187,6 +197,11 @@ void setup()
   // ====== Initialize Web Service ======
   int port = PORT;
   webService = new WebService(port);
+
+  // ====== Initialize Buttons ======
+  upButton = new Button(UP_BUTTON_PIN, &upButtonPressed);
+  downButton = new Button(DOWN_BUTTON_PIN, &downButtonPressed);
+  multiButton = new Button(MULTI_BUTTON_PIN, &multiButtonPressed);
 }
 
 unsigned long lastEnvironemntalSensorUpdateTime = 0;
@@ -194,6 +209,9 @@ unsigned long lastScreenUpdateTime = 0;
 
 void loop()
 {
+  upButton->update();
+  downButton->update();
+  multiButton->update();
 
   // Update temperature and humidity
   if (millis() >= lastEnvironemntalSensorUpdateTime + ENVIRONMENTAL_SENSOR_UPDATE_PERIOD)
@@ -267,4 +285,56 @@ void loop()
   }
 
   delay(30);
+}
+
+void upButtonPressed()
+{
+  if (thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC)
+  {
+    //Increase 1 degree of current screen unit
+    double increase = 1;
+    // if (storage->getSettingScreenImperial() == true)
+    // {
+    //   increase = 1.8;
+    // }
+
+    thermostat->setSetpointLow(thermostat->getSetpointLow() + increase);
+  }
+}
+
+void downButtonPressed()
+{
+  if (thermostat->getMode() == Thermostat::ThermostatMode::AUTOMATIC)
+  {
+    //Decrease 1 degree of current screen unit
+    double decrease = 1;
+    // if (storage->getSettingScreenImperial() == true)
+    // {
+    //   decrease = 1.8;
+    // }
+
+    thermostat->setSetpointLow(thermostat->getSetpointLow() - decrease);
+  }
+}
+
+void multiButtonPressed()
+{
+  Thermostat::ThermostatMode mode = thermostat->getMode();
+
+  if (mode == Thermostat::ThermostatMode::OFF)
+  {
+    thermostat->setMode(Thermostat::ThermostatMode::AUTOMATIC);
+  }
+  else if (mode == Thermostat::ThermostatMode::AUTOMATIC)
+  {
+    thermostat->setMode(Thermostat::ThermostatMode::HEAT);
+  }
+  else if (mode == Thermostat::ThermostatMode::HEAT)
+  {
+    thermostat->setMode(Thermostat::ThermostatMode::OFF);
+  }
+  else
+  {
+    thermostat->setMode(Thermostat::ThermostatMode::OFF);
+  }
 }
