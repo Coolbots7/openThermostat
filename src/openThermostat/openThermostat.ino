@@ -47,6 +47,9 @@ Adafruit_BME280 bme(BME_CS_PIN); // hardware SPI
 #define DEFAULT_SETPOINT_HIGH 25
 #endif
 
+// ====== Display Settings ======
+#define SCREEN_BRIGHTNESS 1
+#define SCREEN_UPDATE_PERIOD 1000
 
 // ====== Globals ======
 
@@ -79,6 +82,7 @@ void setup()
 
   // ====== Create Display ======
   display = new Display();
+  display->setBrightness(SCREEN_BRIGHTNESS);
 
   // Factory reset
   pinMode(FACTORY_RESET_PIN, INPUT);
@@ -186,6 +190,7 @@ void setup()
 }
 
 unsigned long lastEnvironemntalSensorUpdateTime = 0;
+unsigned long lastScreenUpdateTime = 0;
 
 void loop()
 {
@@ -254,6 +259,12 @@ void loop()
     digitalWrite(FAN_RELAY_PIN, HIGH);
   }
 
-  // Update display
-  display->main(currentTemperature, currentHumidity);
+  if (millis() >= lastScreenUpdateTime + SCREEN_UPDATE_PERIOD)
+  {
+    lastScreenUpdateTime = millis();
+    // Update display
+    display->main(currentTemperature, currentHumidity);
+  }
+
+  delay(30);
 }
